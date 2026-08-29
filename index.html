@@ -490,9 +490,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
     <div id="labelPreviewWrap">
       <div class="no-selection">Seleziona uno o più prodotti dalla scheda <strong>Prodotti</strong> (checkbox a sinistra) oppure scegli una categoria qui sopra per generare le etichette.</div>
     </div>
-    <div class="print-area" id="printArea"></div>
   </div>
 </div>
+<div class="print-area" id="printArea"></div>
 
 <!-- Modal prodotto -->
 <div class="modal-bg" id="productModal">
@@ -1625,7 +1625,7 @@ document.getElementById('doPrintBtn').addEventListener('click', ()=>{
     });
   }
   applyPrintPageStyle();
-  setTimeout(()=>window.print(), 150);
+  setTimeout(()=>window.print(), 300);
 });
 
 
@@ -1992,6 +1992,10 @@ async function openScanModal(){
     statusEl.textContent = 'Fotocamera non disponibile in questo browser. Su alcuni browser serve aprire l\'app come pagina https:// (non funziona da alcuni contesti di anteprima).';
     return;
   }
+  if(typeof jsQR === 'undefined'){
+    statusEl.textContent = 'La libreria di lettura QR non si è caricata (controlla la connessione a internet e ricarica la pagina).';
+    return;
+  }
   try{
     scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
   }catch(e){
@@ -2000,51 +2004,69 @@ async function openScanModal(){
   }
   const video = document.getElementById('scanVideo');
   video.srcObject = scanStream;
-  await video.play();
+  try{
+    await video.play();
+  }catch(e){
+    statusEl.textContent = 'Impossibile avviare il video della fotocamera. Riprova.';
+    return;
+  }
   statusEl.textContent = 'Inquadra il QR o il codice a barre stampato sull\'etichetta del prodotto.';
   scanActive = true;
   scanLoop();
-  barcodeIntervalId = setInterval(tryDecodeBarcode, 400);
+  if(typeof Quagga !== 'undefined'){
+    barcodeIntervalId = setInterval(tryDecodeBarcode, 400);
+  }
 }
 function scanLoop(){
   if(!scanActive) return;
   const video = document.getElementById('scanVideo');
   const canvas = document.getElementById('scanCanvas');
-  if(video.readyState === video.HAVE_ENOUGH_DATA){
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imgData.data, canvas.width, canvas.height);
-    if(code && code.data){
-      handleScanResult(code.data.trim());
-      return;
+  try{
+    if(video.readyState === video.HAVE_ENOUGH_DATA){
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imgData.data, canvas.width, canvas.height);
+      if(code && code.data){
+        handleScanResult(code.data.trim());
+        return;
+      }
     }
+  }catch(e){
+    console.error('Errore durante la lettura del fotogramma', e);
+    document.getElementById('scanStatus').textContent = 'Errore nella lettura della fotocamera. Chiudi e riprova.';
+    return; // interrompiamo il ciclo invece di continuare a fallire in silenzio
   }
   scanRafId = requestAnimationFrame(scanLoop);
 }
 function tryDecodeBarcode(){
-  if(!scanActive || quaggaBusy) return;
+  if(!scanActive || quaggaBusy || typeof Quagga==='undefined') return;
   const canvas = document.getElementById('scanCanvas');
   if(!canvas.width || !canvas.height) return;
   quaggaBusy = true;
   let dataUrl;
   try{ dataUrl = canvas.toDataURL('image/png'); }
   catch(e){ quaggaBusy = false; return; }
-  Quagga.decodeSingle({
-    src: dataUrl,
-    numOfWorkers: 0,
-    inputStream: { size: 800 },
-    decoder: { readers: ['code_128_reader'] },
-    locate: true
-  }, function(result){
+  try{
+    Quagga.decodeSingle({
+      src: dataUrl,
+      numOfWorkers: 0,
+      inputStream: { size: 800 },
+      decoder: { readers: ['code_128_reader'] },
+      locate: true
+    }, function(result){
+      quaggaBusy = false;
+      if(!scanActive) return;
+      if(result && result.codeResult && result.codeResult.code){
+        handleScanResult(result.codeResult.code.trim());
+      }
+    });
+  }catch(e){
     quaggaBusy = false;
-    if(!scanActive) return;
-    if(result && result.codeResult && result.codeResult.code){
-      handleScanResult(result.codeResult.code.trim());
-    }
-  });
+    console.error('Errore lettura barcode', e);
+  }
 }
 function closeScanModal(){
   scanActive = false;
