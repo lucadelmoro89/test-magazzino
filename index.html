@@ -528,7 +528,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
         </div>
         <div class="field">
           <label>Disponibilità</label>
-          <input type="number" id="f_disponibilita" step="1">
+          <input type="number" id="f_disponibilita" step="1" readonly style="background:var(--surface-2);color:var(--ink-soft);cursor:not-allowed;" title="Coincide sempre con la Giacenza">
         </div>
         <div class="field">
           <label>In arrivo</label>
@@ -1234,6 +1234,9 @@ function closeModal(){
 document.getElementById('genCodeBtn').addEventListener('click', ()=>{
   document.getElementById('f_codice').value = nextCode(document.getElementById('f_categoria').value);
 });
+document.getElementById('f_giacenza').addEventListener('input', (e)=>{
+  document.getElementById('f_disponibilita').value = e.target.value;
+});
 document.getElementById('f_categoria').addEventListener('change', (e)=>{
   if(e.target.value === '__new'){
     const name = prompt('Nome nuova categoria:');
@@ -1259,7 +1262,7 @@ document.getElementById('saveBtn').addEventListener('click', ()=>{
     prodotto: misura ? `${modello} ${misura}` : modello,
     codice,
     giacenza: Number(document.getElementById('f_giacenza').value)||0,
-    disponibilita: Number(document.getElementById('f_disponibilita').value)||0,
+    disponibilita: Number(document.getElementById('f_giacenza').value)||0,
     inArrivo: Number(document.getElementById('f_inArrivo').value)||0,
     ubicazione: document.getElementById('f_ubicazione').value.trim(),
     fornitore: document.getElementById('f_fornitore').value.trim(),
