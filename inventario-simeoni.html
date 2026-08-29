@@ -1,0 +1,2161 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magazzino — Simeoni Materassi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/dist/quagga.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root{
+  --bg:#F3F4EF;
+  --surface:#FFFFFF;
+  --surface-2:#EDEFE9;
+  --ink:#22282A;
+  --ink-soft:#5C6560;
+  --ink-faint:#8A928C;
+  --accent:#2F5D62;
+  --accent-ink:#F3F4EF;
+  --accent-soft:#E1EAE9;
+  --warn:#B4842A;
+  --warn-soft:#F6EBD8;
+  --danger:#B23A48;
+  --danger-soft:#F5E1E2;
+  --border:#DCDFD8;
+  --cat-cuscini:#7C9C8E;
+  --cat-materassi:#2F5D62;
+  --cat-reti:#9C7C4E;
+  --cat-topper:#7C6C9C;
+  --radius:10px;
+  --shadow: 0 1px 2px rgba(34,40,42,0.06), 0 4px 14px rgba(34,40,42,0.06);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+.app{max-width:1180px;margin:0 auto;padding:20px 20px 80px;}
+code, .mono{font-family:'IBM Plex Mono',monospace;}
+
+/* ---------- Header ---------- */
+.topbar{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;
+  padding-bottom:18px;margin-bottom:18px;
+  border-bottom:1px solid var(--border);
+}
+.brand h1{
+  font-family:'Fraunces',serif;font-weight:600;font-size:26px;margin:0 0 2px;
+  letter-spacing:-0.01em;
+}
+.brand p{margin:0;color:var(--ink-soft);font-size:13px;}
+.brand .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:7px;vertical-align:1px;}
+
+.tabs{display:flex;gap:4px;background:var(--surface-2);padding:4px;border-radius:11px;}
+.tab-btn{
+  border:none;background:transparent;padding:9px 16px;border-radius:8px;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink-soft);
+  cursor:pointer;transition:all .15s ease;white-space:nowrap;
+}
+.tab-btn.active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);}
+.tab-btn:hover:not(.active){color:var(--ink);}
+
+.view{display:none;}
+.view.active{display:block;animation:fade .2s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
+
+/* ---------- Toolbar ---------- */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+.search-wrap{position:relative;flex:1 1 260px;min-width:220px;}
+.search-wrap input{width:100%;}
+.search-wrap .hint{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--ink-faint);pointer-events:none;}
+input[type=text], input[type=number], input[type=date], select, textarea{
+  font-family:inherit;font-size:14px;color:var(--ink);
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:9px 12px;outline:none;transition:border-color .15s ease;
+}
+input:focus, select:focus, textarea:focus{border-color:var(--accent);}
+select{cursor:pointer;}
+.btn{
+  font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;
+  border-radius:8px;padding:9px 15px;border:1px solid var(--border);
+  background:var(--surface);color:var(--ink);transition:all .12s ease;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.btn:hover{border-color:var(--ink-faint);}
+.btn-primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.btn-primary:hover{background:#274d51;}
+.btn-danger{color:var(--danger);}
+.btn-danger:hover{border-color:var(--danger);}
+.btn-ghost{border-color:transparent;background:transparent;}
+.btn-ghost:hover{background:var(--surface-2);}
+.btn-sm{padding:5px 10px;font-size:12.5px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ---------- Table ---------- */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+table{width:100%;border-collapse:collapse;}
+thead th{
+  text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--ink-faint);font-weight:600;padding:11px 12px;border-bottom:1px solid var(--border);
+  background:var(--surface-2);position:sticky;top:0;
+}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:14px;vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--surface-2);}
+.cat-chip{
+  display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+  padding:3px 9px;border-radius:20px;background:var(--surface-2);color:var(--ink-soft);
+}
+.cat-chip .sw{width:7px;height:7px;border-radius:50%;}
+.prod-name{font-weight:500;}
+.prod-name .sub{display:block;font-size:12px;color:var(--ink-faint);font-weight:400;margin-top:1px;}
+.qty-cell{display:flex;align-items:center;gap:6px;}
+.qty-cell button{
+  width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--surface);
+  cursor:pointer;font-size:14px;line-height:1;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;
+}
+.qty-cell button:hover{background:var(--surface-2);color:var(--ink);}
+.qty-cell input{width:46px;text-align:center;padding:5px 4px;}
+.badge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;}
+.badge-warn{background:var(--warn-soft);color:var(--warn);}
+.badge-danger{background:var(--danger-soft);color:var(--danger);}
+.badge-ok{background:var(--accent-soft);color:var(--accent);}
+.row-actions{display:flex;gap:4px;}
+.icon-btn{
+  width:28px;height:28px;border-radius:7px;border:1px solid transparent;background:transparent;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);
+}
+.icon-btn:hover{background:var(--surface-2);color:var(--ink);}
+.empty-state{padding:60px 20px;text-align:center;color:var(--ink-faint);}
+.empty-state h3{font-family:'Fraunces',serif;font-weight:500;color:var(--ink);margin-bottom:4px;}
+
+/* ---------- Stat cards ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.stat-card .n{font-family:'Fraunces',serif;font-size:26px;font-weight:600;line-height:1;}
+.stat-card .l{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+
+/* ---------- Modal ---------- */
+.modal-bg{
+  display:none;position:fixed;inset:0;background:rgba(34,40,42,.45);
+  align-items:center;justify-content:center;z-index:100;padding:20px;
+}
+.modal-bg.active{display:flex;}
+.modal{
+  background:var(--surface);border-radius:14px;width:100%;max-width:520px;
+  max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border);}
+.modal-head h3{font-family:'Fraunces',serif;font-weight:600;font-size:19px;margin:0;}
+.modal-body{padding:20px 22px;}
+.modal-foot{padding:16px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-grid .full{grid-column:1/-1;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;}
+.field input, .field select{width:100%;}
+.code-field{display:flex;gap:6px;}
+.code-field input{flex:1;}
+
+/* ---------- Inventario mode ---------- */
+.inv-group{margin-bottom:22px;}
+.inv-group-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:0 2px;}
+.inv-group-head .sw{width:9px;height:9px;border-radius:50%;}
+.inv-group-head h3{font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin:0;}
+.inv-group-head span{font-size:12px;color:var(--ink-faint);}
+.inv-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:6px;
+}
+.inv-card .name{flex:1;min-width:0;}
+.inv-card .name .p{font-weight:500;font-size:14px;}
+.inv-card .name .c{font-size:11.5px;color:var(--ink-faint);}
+.inv-count{display:flex;align-items:center;gap:8px;}
+.inv-count button{
+  width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);
+  font-size:17px;cursor:pointer;color:var(--ink-soft);
+}
+.inv-count button:hover{background:var(--surface-2);color:var(--ink);}
+.inv-count input{width:56px;text-align:center;font-size:15px;padding:7px 4px;font-weight:600;}
+.diff-tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;min-width:34px;text-align:center;}
+.diff-pos{background:var(--accent-soft);color:var(--accent);}
+.diff-neg{background:var(--danger-soft);color:var(--danger);}
+.diff-zero{background:var(--surface-2);color:var(--ink-faint);}
+.inv-bar{
+  position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);
+  padding:12px 16px;display:flex;justify-content:space-between;align-items:center;
+  border-radius:var(--radius);box-shadow:0 -6px 16px rgba(0,0,0,.05);margin-top:10px;
+}
+
+/* ---------- Etichette ---------- */
+.label-controls{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:18px;display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;box-shadow:var(--shadow);}
+.label-controls .field{min-width:150px;}
+.seg{display:flex;background:var(--surface-2);border-radius:8px;padding:3px;}
+.seg button{border:none;background:transparent;padding:7px 12px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+.seg button.active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow);}
+
+.label-sheet{display:flex;flex-wrap:wrap;gap:14px;justify-content:flex-start;}
+.tag-label{
+  width:220px;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:14px 14px 12px;position:relative;display:flex;flex-direction:column;gap:8px;
+  border-left:5px solid var(--accent);
+}
+.tag-label .punch{position:absolute;top:10px;right:12px;width:10px;height:10px;border-radius:50%;border:1.5px solid var(--ink-faint);background:var(--bg);}
+.tag-label .shop{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600;}
+.tag-label .pname{font-weight:600;font-size:13px;line-height:1.25;padding-right:14px;min-height:32px;}
+.tag-label .pcat{font-size:11px;color:var(--ink-soft);}
+.tag-label .codes{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;padding-top:2px;}
+.tag-label .codice{font-size:11px;text-align:center;letter-spacing:.03em;color:var(--ink-soft);}
+.tag-label .qrbox{background:#fff;padding:4px;border-radius:4px;}
+.tag-label svg{max-width:100%;}
+.no-selection{padding:50px 20px;text-align:center;color:var(--ink-faint);background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);}
+.format-note{font-size:12px;color:var(--ink-faint);margin:-8px 0 16px;}
+
+/* etichette compatte per formati A4/rotolo (misure precise in mm) */
+.tag-compact{
+  box-sizing:border-box;border:1px dashed #ccc;border-left:3px solid var(--accent);
+  padding:2mm 2.5mm;display:flex;flex-direction:column;justify-content:space-between;
+  overflow:hidden;background:#fff;
+}
+.tag-compact .tc-top{display:flex;justify-content:space-between;align-items:center;font-size:6.5pt;color:#777;text-transform:uppercase;letter-spacing:.03em;gap:4px;}
+.tag-compact .tc-top span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tag-compact .tc-name{font-size:8.5pt;font-weight:600;line-height:1.18;color:#161a1b;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.tag-compact .tc-name .tc-misura{color:var(--accent);}
+.tag-compact .tc-codes{display:flex;align-items:center;gap:2mm;}
+.tag-compact .tc-qr{width:13mm;height:13mm;flex-shrink:0;}
+.tag-compact .tc-qr img, .tag-compact .tc-qr canvas{width:100% !important;height:100% !important;display:block;}
+.tag-compact .tc-barcode svg{height:7mm;max-width:100%;}
+.tag-compact .tc-codice{font-family:'IBM Plex Mono',monospace;font-size:6pt;color:#555;white-space:nowrap;}
+
+.a4-sheet{
+  width:210mm;height:297mm;display:grid;
+  grid-template-columns:repeat(3,70mm);grid-template-rows:repeat(8,37mm);
+  justify-content:center;align-content:start;page-break-after:always;
+}
+.roll-page{page-break-after:always;display:flex;}
+.compact-preview-wrap{display:flex;flex-wrap:wrap;gap:8px;}
+
+.reason-popover{
+  position:fixed;z-index:150;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.15);padding:6px;min-width:150px;
+}
+.reason-popover .rp-title{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-faint);font-weight:700;padding:5px 10px 3px;}
+.reason-popover button{
+  display:block;width:100%;text-align:left;border:none;background:transparent;
+  padding:8px 10px;border-radius:6px;font-family:inherit;font-size:13.5px;cursor:pointer;color:var(--ink);
+}
+.reason-popover button:hover{background:var(--surface-2);}
+
+.seller-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);}
+.seller-row:last-child{border-bottom:none;}
+.seller-rank{width:22px;font-family:'Fraunces',serif;font-weight:600;color:var(--ink-faint);font-size:14px;}
+.seller-info{flex:1;min-width:0;}
+.seller-info .n{font-weight:500;font-size:13.5px;}
+.seller-info .c{font-size:11.5px;color:var(--ink-faint);}
+.seller-bar-wrap{flex:2;background:var(--surface-2);border-radius:6px;height:8px;overflow:hidden;}
+.seller-bar{height:100%;background:var(--accent);border-radius:6px;}
+.seller-qty{width:60px;text-align:right;font-weight:600;font-size:13.5px;}
+
+.checkbox-cell{width:34px;}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;}
+
+.toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;font-size:13.5px;
+  opacity:0;transition:all .25s ease;pointer-events:none;z-index:200;box-shadow:var(--shadow);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.banner{
+  background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:10px 16px;
+  font-size:13px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+.banner button{background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;font-size:15px;}
+
+@media (max-width:720px){
+  .form-grid{grid-template-columns:1fr;}
+  thead{display:none;}
+  table, tbody, tr, td{display:block;width:100%;}
+  tbody tr{border-bottom:1px solid var(--border);padding:10px 0;}
+  tbody td{border:none;padding:4px 12px;}
+  .topbar{flex-direction:column;align-items:flex-start;}
+}
+
+/* ---------- Print ---------- */
+@media print{
+  body *{visibility:hidden;}
+  .print-area, .print-area *{visibility:visible;}
+  .print-area{position:absolute;top:0;left:0;width:100%;padding:10mm;}
+  .tag-label{break-inside:avoid;border-color:#999;}
+  .app, .no-print{display:none;}
+  .print-area{display:block !important;}
+}
+.print-area{display:none;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <h1><span class="dot"></span>Magazzino Simeoni Materassi</h1>
+    </div>
+    <div class="tabs no-print">
+      <button class="tab-btn active" data-view="prodotti">Prodotti</button>
+      <button class="tab-btn" data-view="inventario">Inventario</button>
+      <button class="tab-btn" data-view="statistiche">Statistiche</button>
+      <button class="tab-btn" data-view="etichette">Etichette</button>
+    </div>
+  </div>
+
+  <div id="storageWarningBanner" class="banner no-print" style="display:none;background:var(--danger-soft);color:var(--danger);">
+    <span>⚠️ In questo browser il salvataggio automatico non è disponibile: le modifiche <strong>non verranno conservate</strong> alla chiusura della pagina. Apri il file tramite un indirizzo web invece che con doppio clic (chiedi a Claude come fare), oppure prova con Google Chrome.</span>
+  </div>
+
+  <div id="banner" class="banner no-print" style="display:none;">
+    <span>Dati iniziali caricati dal tuo file Excel. Modifica pure liberamente: tutto viene salvato automaticamente.</span>
+    <button onclick="dismissBanner()">&times;</button>
+  </div>
+
+  <!-- ============ VISTA PRODOTTI ============ -->
+  <div class="view active" id="view-prodotti">
+    <div class="stats" id="stats"></div>
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Cerca per nome o codice… (compatibile con lettore barcode)">
+        <span class="hint">↵</span>
+      </div>
+      <select id="catFilter"></select>
+      <select id="misuraFilter">
+        <option value="all">Tutte le misure</option>
+      </select>
+      <select id="stockFilter">
+        <option value="all">Tutte le scorte</option>
+        <option value="low">Scorta bassa</option>
+        <option value="out">Esauriti</option>
+      </select>
+      <button class="btn" id="printSelectedBtn">🏷️ Stampa selezionati (<span id="selCount">0</span>)</button>
+      <button class="btn" id="importExcelBtn">📥 Importa Excel</button>
+      <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;">
+      <button class="btn" id="exportExcelBtn">📊 Esporta Excel</button>
+      <button class="btn" id="exportPdfBtn">📄 Esporta PDF</button>
+      <button class="icon-btn" id="settingsBtn" title="Dati azienda per l'export">⚙️</button>
+      <button class="btn btn-primary" id="scanBtn">📷 Scansiona codice</button>
+      <button class="btn btn-primary" id="newProductBtn">+ Nuovo prodotto</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="checkbox-cell"><input type="checkbox" id="selectAll"></th>
+            <th>Categoria</th>
+            <th>Prodotto</th>
+            <th>Misura</th>
+            <th>Codice</th>
+            <th>Giacenza</th>
+            <th>Ubicazione</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <h3>Nessun prodotto trovato</h3>
+        <p>Prova a modificare la ricerca o i filtri.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ VISTA INVENTARIO ============ -->
+  <div class="view" id="view-inventario">
+    <div class="toolbar">
+      <div class="search-wrap" style="flex:1 1 260px;">
+        <input type="text" id="invSearch" placeholder="Filtra prodotti da contare…">
+      </div>
+      <select id="invCatFilter"></select>
+      <button class="btn btn-ghost" id="invResetBtn">Azzera conteggi correnti</button>
+    </div>
+    <div id="invGroups"></div>
+  </div>
+
+  <!-- ============ VISTA STATISTICHE ============ -->
+  <div class="view" id="view-statistiche">
+    <div class="toolbar">
+      <select id="statPeriodo">
+        <option value="7">Ultimi 7 giorni</option>
+        <option value="30" selected>Ultimi 30 giorni</option>
+        <option value="90">Ultimi 90 giorni</option>
+        <option value="all">Da sempre</option>
+      </select>
+      <select id="statCatFilter">
+        <option value="all">Tutte le categorie</option>
+      </select>
+    </div>
+    <div class="stats" id="statSummary"></div>
+    <div class="table-wrap" style="padding:18px 20px;margin-bottom:18px;">
+      <h3 style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin:0 0 14px;">Prodotti più venduti</h3>
+      <div id="topSellersList"></div>
+    </div>
+    <div class="table-wrap">
+      <h3 style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin:0;padding:18px 20px 0;">Movimenti recenti</h3>
+      <table>
+        <thead>
+          <tr><th>Data</th><th>Prodotto</th><th>Categoria</th><th>Motivo</th><th>Quantità</th></tr>
+        </thead>
+        <tbody id="movementsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ VISTA ETICHETTE ============ -->
+  <div class="view" id="view-etichette">
+    <div class="label-controls no-print">
+      <div class="field">
+        <label>Formato di stampa</label>
+        <div class="seg" id="sheetFormatSeg">
+          <button data-v="libero" class="active">Foglio libero</button>
+          <button data-v="a4">A4 pre-tagliato</button>
+          <button data-v="rotolo">Rotolo termico</button>
+        </div>
+      </div>
+      <div class="field" id="rotoloWidthField" style="display:none;">
+        <label>Larghezza rotolo</label>
+        <select id="rotoloWidth">
+          <option value="50">50 mm</option>
+          <option value="60" selected>60 mm</option>
+          <option value="100">100 mm</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Tipo codice</label>
+        <div class="seg" id="codeTypeSeg">
+          <button data-v="qr" class="active">QR</button>
+          <button data-v="barcode">Barcode</button>
+          <button data-v="both">Entrambi</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Copie per prodotto</label>
+        <input type="number" id="copiesInput" value="1" min="1" max="20" style="width:70px;">
+      </div>
+      <div class="field" style="flex:1;min-width:200px;">
+        <label>Oppure stampa un'intera categoria</label>
+        <select id="labelCatPick">
+          <option value="">— seleziona categoria —</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="doPrintBtn" style="margin-left:auto;">🖨️ Stampa etichette</button>
+    </div>
+    <div class="format-note" id="formatNote"></div>
+    <div id="labelPreviewWrap">
+      <div class="no-selection">Seleziona uno o più prodotti dalla scheda <strong>Prodotti</strong> (checkbox a sinistra) oppure scegli una categoria qui sopra per generare le etichette.</div>
+    </div>
+    <div class="print-area" id="printArea"></div>
+  </div>
+</div>
+
+<!-- Modal prodotto -->
+<div class="modal-bg" id="productModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">Nuovo prodotto</h3>
+      <button class="icon-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Categoria</label>
+          <select id="f_categoria"></select>
+        </div>
+        <div class="field">
+          <label>Codice</label>
+          <div class="code-field">
+            <input type="text" id="f_codice" class="mono">
+            <button class="btn btn-sm" id="genCodeBtn" type="button">Genera</button>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Modello</label>
+          <input type="text" id="f_modello" placeholder="es. Comfortop Supersoft H3">
+        </div>
+        <div class="field">
+          <label>Misura</label>
+          <input type="text" id="f_misura" placeholder="es. 160x190 (lascia vuoto se non applicabile)">
+        </div>
+        <div class="field">
+          <label>Giacenza</label>
+          <input type="number" id="f_giacenza" step="1">
+        </div>
+        <div class="field">
+          <label>Disponibilità</label>
+          <input type="number" id="f_disponibilita" step="1">
+        </div>
+        <div class="field">
+          <label>In arrivo</label>
+          <input type="number" id="f_inArrivo" step="1">
+        </div>
+        <div class="field">
+          <label>Ubicazione</label>
+          <input type="text" id="f_ubicazione" placeholder="es. Scaffale A3">
+        </div>
+        <div class="field">
+          <label>Lotto</label>
+          <input type="text" id="f_lotto">
+        </div>
+        <div class="field">
+          <label>Scadenza</label>
+          <input type="date" id="f_scadenza">
+        </div>
+        <div class="field">
+          <label>Prezzo vendita (€)</label>
+          <input type="number" id="f_valore" step="0.01">
+        </div>
+        <div class="field">
+          <label>Prezzo acquisto (€)</label>
+          <input type="number" id="f_prezzoAcquisto" step="0.01">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="deleteBtn" style="margin-right:auto;">Elimina</button>
+      <button class="btn" onclick="closeModal()">Annulla</button>
+      <button class="btn btn-primary" id="saveBtn">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal impostazioni azienda -->
+<div class="modal-bg" id="settingsModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-head">
+      <h3>Dati azienda per il PDF</h3>
+      <button class="icon-btn" onclick="closeSettingsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Ragione sociale</label>
+          <input type="text" id="s_ragSociale">
+        </div>
+        <div class="field full">
+          <label>Indirizzo</label>
+          <input type="text" id="s_indirizzo">
+        </div>
+        <div class="field">
+          <label>P.IVA</label>
+          <input type="text" id="s_piva">
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);margin:20px 0 16px;padding-top:16px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:8px;">Sincronizza tra dispositivi (Google Drive)</label>
+        <p style="font-size:12.5px;color:var(--ink-faint);margin:0 0 10px;">Tiene allineati automaticamente i dati tra tutti i dispositivi collegati allo stesso account Google Drive. Richiede una configurazione iniziale — chiedi a Claude come ottenere il "Client ID" se non lo hai ancora.</p>
+        <div class="field full" style="margin-bottom:10px;">
+          <label>Client ID Google</label>
+          <input type="text" id="s_googleClientId" placeholder="xxxxxxxx.apps.googleusercontent.com">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn" id="saveClientIdBtn">Salva Client ID</button>
+          <button class="btn btn-primary" id="connectDriveBtn" style="display:none;">🔗 Connetti Google Drive</button>
+          <button class="btn" id="syncNowBtn" style="display:none;">🔄 Sincronizza ora</button>
+          <button class="btn btn-danger" id="disconnectDriveBtn" style="display:none;">Disconnetti</button>
+        </div>
+        <p id="driveStatus" style="font-size:12px;color:var(--ink-faint);margin:10px 0 0;"></p>
+      </div>
+      <div style="border-top:1px solid var(--border);margin:20px 0 16px;padding-top:16px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:8px;">Backup dati</label>
+        <p style="font-size:12.5px;color:var(--ink-faint);margin:0 0 10px;">Scarica una copia completa di prodotti, movimenti e impostazioni. Utile prima di modifiche importanti o per trasferire i dati su un altro dispositivo/browser.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" id="downloadBackupBtn">⬇️ Scarica backup</button>
+          <button class="btn" id="restoreBackupBtn">⬆️ Ripristina da backup</button>
+          <input type="file" id="restoreFileInput" accept=".json" style="display:none;">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeSettingsModal()">Annulla</button>
+      <button class="btn btn-primary" id="saveSettingsBtn">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal anteprima import -->
+<div class="modal-bg" id="importModal">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-head">
+      <h3>Anteprima importazione</h3>
+      <button class="icon-btn" onclick="closeImportModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="importSummary" style="margin-bottom:14px;font-size:13.5px;color:var(--ink-soft);"></div>
+      <div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+        <table>
+          <thead>
+            <tr><th>Stato</th><th>Codice</th><th>Prodotto</th><th>Giacenza</th><th>Ubicazione</th></tr>
+          </thead>
+          <tbody id="importPreviewBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeImportModal()">Annulla</button>
+      <button class="btn btn-primary" id="confirmImportBtn">Conferma importazione</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal scansione QR -->
+<div class="modal-bg" id="scanModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <h3>Scansiona codice prodotto</h3>
+      <button class="icon-btn" onclick="closeScanModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="scanVideoWrap" style="position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:1/1;">
+        <video id="scanVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+        <div style="position:absolute;inset:14%;border:2px solid rgba(255,255,255,.7);border-radius:12px;pointer-events:none;"></div>
+      </div>
+      <canvas id="scanCanvas" style="display:none;"></canvas>
+      <p id="scanStatus" style="font-size:13px;color:var(--ink-soft);margin-top:12px;text-align:center;">Inquadra il QR o il codice a barre stampato sull'etichetta del prodotto.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+window.PRODUCTS_SEED = [{"categoria": "Cuscini", "prodotto": "Baby Antiacaro", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Baby Forex", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Coccola", "lotto": "", "scadenza": "", "giacenza": 12.0, "disponibilita": 12.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Cotone con le molle", "lotto": "", "scadenza": "", "giacenza": 6.0, "disponibilita": 6.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Curem Air Classico H13", "lotto": "", "scadenza": "", "giacenza": 3.0, "disponibilita": 3.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Curem Air Ergo", "lotto": "", "scadenza": "", "giacenza": 3.0, "disponibilita": 3.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Curem Air H11", "lotto": "", "scadenza": "", "giacenza": 6.0, "disponibilita": 6.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Cuscino Plumage 1000g", "lotto": "", "scadenza": "", "giacenza": 7.0, "disponibilita": 7.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Cuscino Plumage 600g", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Cuscino Plumage 800g", "lotto": "", "scadenza": "", "giacenza": 5.0, "disponibilita": 5.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Dama classico H13", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Dinamico H12", "lotto": "", "scadenza": "", "giacenza": 6.0, "disponibilita": 6.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Dream Blue Cervicale H12", "lotto": "", "scadenza": "", "giacenza": 8.0, "disponibilita": 8.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Dream Blue Saponetta H12", "lotto": "", "scadenza": "", "giacenza": 8.0, "disponibilita": 8.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Dream Blue Saponetta H14", "lotto": "", "scadenza": "", "giacenza": 6.0, "disponibilita": 6.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Energia Base E05 (10 cm)", "lotto": "", "scadenza": "", "giacenza": 3.0, "disponibilita": 3.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Energia Base E10 (13 cm)", "lotto": "", "scadenza": "", "giacenza": 4.0, "disponibilita": 4.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Energia Cervicale EC10 (6-8 cm)", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Energia Cervicale EC20 (8-10 cm)", "lotto": "", "scadenza": "", "giacenza": 6.0, "disponibilita": 6.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Ghiro", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Green Anatomico", "lotto": "", "scadenza": "", "giacenza": 10.0, "disponibilita": 10.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Green Medio", "lotto": "", "scadenza": "", "giacenza": 10.0, "disponibilita": 10.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Jolly", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Just Air", "lotto": "", "scadenza": "", "giacenza": 22.0, "disponibilita": 22.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Just Air cervicale", "lotto": "", "scadenza": "", "giacenza": 7.0, "disponibilita": 7.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Lino Memory Alto", "lotto": "", "scadenza": "", "giacenza": 10.0, "disponibilita": 10.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Lino Memory sottile", "lotto": "", "scadenza": "", "giacenza": 4.0, "disponibilita": 4.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Marconi", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Abbraccio", "lotto": "", "scadenza": "", "giacenza": 5.0, "disponibilita": 5.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Air H6", "lotto": "", "scadenza": "", "giacenza": 3.0, "disponibilita": 3.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Air H9", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Bamboo Anatomico", "lotto": "", "scadenza": "", "giacenza": 16.0, "disponibilita": 16.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Bamboo Saponetta H13", "lotto": "", "scadenza": "", "giacenza": 10.0, "disponibilita": 10.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Fresh", "lotto": "", "scadenza": "", "giacenza": 0.0, "disponibilita": 0.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Green Anatomico", "lotto": "", "scadenza": "", "giacenza": 4.0, "disponibilita": 4.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Outlast", "lotto": "", "scadenza": "", "giacenza": 16.0, "disponibilita": 16.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Slim H11", "lotto": "", "scadenza": "", "giacenza": 13.0, "disponibilita": 13.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Soft", "lotto": "", "scadenza": "", "giacenza": 4.0, "disponibilita": 4.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memory Soft cervicale", "lotto": "", "scadenza": "", "giacenza": 0.0, "disponibilita": 0.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Memoryplum", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Michael Anatomico", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Michael Anatomico fod. Bamboo", "lotto": "", "scadenza": "", "giacenza": 4.0, "disponibilita": 4.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "My Fresh Gel", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Natural Latex H12,5", "lotto": "", "scadenza": "", "giacenza": 11.0, "disponibilita": 11.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Natural Latex h15", "lotto": "", "scadenza": "", "giacenza": 6.0, "disponibilita": 6.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Orthomemory", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Prestige", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Pupillo", "lotto": "", "scadenza": "", "giacenza": 7.0, "disponibilita": 7.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Pupillo H10", "lotto": "", "scadenza": "", "giacenza": 3.0, "disponibilita": 3.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Pure", "lotto": "", "scadenza": "", "giacenza": 6.0, "disponibilita": 6.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Respiro Base", "lotto": "", "scadenza": "", "giacenza": 4.0, "disponibilita": 4.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Respiro Cervicale", "lotto": "", "scadenza": "", "giacenza": 4.0, "disponibilita": 4.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Sognare", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Soia + Air", "lotto": "", "scadenza": "", "giacenza": 7.0, "disponibilita": 7.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Soia + Med", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Sonniball", "lotto": "", "scadenza": "", "giacenza": 4.0, "disponibilita": 4.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Tempur Arch Smartcool M", "lotto": "", "scadenza": "", "giacenza": 5.0, "disponibilita": 5.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Tempur Comfort Smartcool Medium", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Tempur Comfort Smartcool Soft", "lotto": "", "scadenza": "", "giacenza": 5.0, "disponibilita": 5.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Tempur Original Queen L", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Tempur Original Queen M", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Tempur Original Queen S", "lotto": "", "scadenza": "", "giacenza": 8.0, "disponibilita": 8.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Viscopure", "lotto": "", "scadenza": "", "giacenza": 6.0, "disponibilita": 6.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Cuscini", "prodotto": "Wave Re-form", "lotto": "", "scadenza": "", "giacenza": 12.0, "disponibilita": 12.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "1500 Molle Memo Blu cm 160x190,  fod. Nano Copper", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "800 Molle Memo Blu sostenuto 160x190, fod. Doppio contatto Bamboo Point", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "800 Molle Memo cm 160x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "800 Molle Memo cm. 160x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Arrotolato cm. 80x190 x18", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Box Strong cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Classic cm. 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Curem Heaven Forte H23 cm. 80x190", "lotto": "", "scadenza": "", "giacenza": 0.0, "disponibilita": 0.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Curem Heaven Fortissimo H20 cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Curem Performance Forte H23 cm. 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Easy 800 cm 160x190, fod. Bioceramic Resistex Top", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Ecobase 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Ecobase cm 160x190 x assistenza", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Ecobase cm 160x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Ecobase cm 85x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Ecobase cm. 80x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Elisir 5000 cm. 160x200, fod. NT50", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Elisir Magic cm. 80x190, fod. NT50", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Elisir-issimo cm. 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Energy 85x195 fod. Slim", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Energy cm 160x190, fod. Air Fresh Classic", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Energy cm. 80x190, fod. Airfresh Classic", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Energy cm. 90x200, fod. Airfresh Classic", "lotto": "", "scadenza": "", "giacenza": 0.0, "disponibilita": 0.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Fiji cm 120x190, fod. Slim Classic", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Fiji cm 80x190, fod. Air Fresh Classic", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Fitness Memory cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Foam 2 Memo equilibrato cm 80x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Foam 3 Memo sostenuto cm 80x190, fod. Twin Cover", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Foam 3 Memo sostenuto cm 85x190, fod. Imbottita", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Fysioform Firm cm 80x190, fod. Thermic Tencel", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Fysioform Soft cm 80x190 fod.Thermic Tencel", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Grand Soleil Greener cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Idea Blu H3 cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Idillium Extra cm 160x190 vecchio modello", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Imperiale 800 cm. 160x190, fod. Seta sfoderabile tinta", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Imperiale Reale cm 160x200, fod.Seta Fissa", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Kuschelmed H2 cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Liberty cm 160x190, sfoderabile", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Magic cm 80x190, fod. Slim", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Magic cm 85x190, fod. Slim", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Matrix Therapy cm 80x190, fod. Merletto", "lotto": "", "scadenza": "", "giacenza": 0.0, "disponibilita": 0.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Memory Confort cm. 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Memory Strong cm 160x190, fod. Bioceramic Resistex", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Next Dream Firm cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Next Dream Soft cm. 160X190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Nido Reload Blue Firm cm 80x190, fod. Bioceramic tinta", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Nido Reload Blue Soft cm 80x190, fod. Bioceramic tinta", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "One by Tempur cm 80x190", "lotto": "", "scadenza": "", "giacenza": 0.0, "disponibilita": 0.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Ortopedic 1000 cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Panchetta per branda pieghevole", "lotto": "", "scadenza": "", "giacenza": 4.0, "disponibilita": 4.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Polaris Firm cm 160x200, fod. Merletto Veneziano MT31", "lotto": "", "scadenza": "", "giacenza": 0.0, "disponibilita": 0.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Purocomfort Topper cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Sbadiglio Ortopedico cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Sofia cm 80x190", "lotto": "", "scadenza": "", "giacenza": 3.0, "disponibilita": 3.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Sofia cm 85x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Sole Firm cm 80x190, fod. Slim", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Standard cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Standard cm 80x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Standard cm. 120x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Suite Spa cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Tempur Firm Supreme cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Tempur Form Original Medium cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Tempur Form Plus Hybrid cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Tempur Form Plus Medium cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Tempur Original 21 cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Tempur Pro Firm cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Tempur Pro Medium cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Tempur Pro Plus Medium cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Tempur Pro Soft cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Top Feel cm. 80x190", "lotto": "", "scadenza": "", "giacenza": -1.0, "disponibilita": -1.0, "inArrivo": 0.0, "ubicazione": "", "valore": -0.0}, {"categoria": "Materassi", "prodotto": "Vintage Ipno cm 160x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Virtus Extra cm. 160x190", "lotto": "", "scadenza": "", "giacenza": 0.0, "disponibilita": 0.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Virtus Extra cm. 160x200", "lotto": "", "scadenza": "", "giacenza": 0.0, "disponibilita": 0.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Waterfoam EP 25 cm 85x195", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Waterfoam EP 25 cm 90x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Wave cm 90x200, fod. Air Fresh", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Materassi", "prodotto": "Wave cm 90x200, fod. Slim", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Branda pieghevole", "lotto": "", "scadenza": "", "giacenza": 3.0, "disponibilita": 3.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Dogma Plus cm. 160x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Energo Static cm. 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Ergo NA cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Ergo RA BT cm 80x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Fix cm. 170x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Human Active NA cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Human Balance FA cm 160x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Human Balance RA BT cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Inca Motore cm. 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Legno cm 120x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Legno cm 120x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Legno cm 160x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Legno cm 160x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Legno cm 80x190", "lotto": "", "scadenza": "", "giacenza": 6.0, "disponibilita": 6.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Legno cm 85x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Legno cm 90x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Legno Estraibile cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Letto a castello cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Motiva Light cm. 80x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Relaxante RA cm 80x190", "lotto": "", "scadenza": "", "giacenza": 4.0, "disponibilita": 4.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Sana NA cm 80x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Sana RA BT 80x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Super FA cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Super FA cm 160x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Super Flexi cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Super NA cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Super RA BT cm 80x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Tempur Superflex cm 80x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Top 120x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Top cm 80x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Reti a doghe", "prodotto": "Top cm 85x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Topper", "prodotto": "Comfortop Supersoft H3 cm. 160x190", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Topper", "prodotto": "Comfortop Supersoft H3 cm. 160x200", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Topper", "prodotto": "Topper Auror '25 sensity h3 cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Topper", "prodotto": "Topper Daisy cm 160x200", "lotto": "", "scadenza": "", "giacenza": 2.0, "disponibilita": 2.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Topper", "prodotto": "Topper Dorsal Cotone cm. 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Topper", "prodotto": "Topper Dorsal Softcare cm. 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Topper", "prodotto": "Topper Memory h3 cm 160x190", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Topper", "prodotto": "Topper Memory Next (Hybrid) cm 160x190", "lotto": "", "scadenza": "", "giacenza": 0.0, "disponibilita": 0.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}, {"categoria": "Topper", "prodotto": "Topper Plumage cm 160/5x190/5 800g B.Norvegia", "lotto": "", "scadenza": "", "giacenza": 1.0, "disponibilita": 1.0, "inArrivo": 0.0, "ubicazione": "", "valore": 0.0}];
+</script>
+<script>
+/* ================== STATE ================== */
+let products = [];
+let selectedIds = new Set();
+let editingId = null;
+let invCounts = {}; // id -> counted value (session only)
+let codeTypeMode = 'qr';
+let movements = [];
+const MOTIVI = ['Vendita','Reso','Danneggiato','Rettifica'];
+let sheetFormat = 'libero';
+let rotoloWidthMm = 60;
+
+const CAT_COLORS = {
+  'Cuscini': '#7C9C8E',
+  'Materassi': '#2F5D62',
+  'Reti a doghe': '#9C7C4E',
+  'Topper': '#7C6C9C'
+};
+function catColor(cat){ return CAT_COLORS[cat] || '#5C6560'; }
+function catPrefix(cat){
+  const map = {'Cuscini':'CUS','Materassi':'MAT','Reti a doghe':'RET','Topper':'TOP'};
+  if(map[cat]) return map[cat];
+  return (cat||'PRD').replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase() || 'PRD';
+}
+
+/* misura: dimensioni tipo 160x190, 160/5x190/5, 80x190 ecc. */
+const MISURA_REGEX = /(\d{2,3}(?:\/\d+)?\s*[xX]\s*\d{2,3}(?:\/\d+)?)/;
+function extractMisura(nome){
+  const m = MISURA_REGEX.exec(nome||'');
+  if(!m) return { modello: (nome||'').trim(), misura: '' };
+  const misura = m[1].replace(/\s+/g,'').replace(/X/,'x');
+  let modello = (nome.slice(0, m.index) + nome.slice(m.index + m[0].length))
+    .replace(/\bcm\.?\s*$/i, '')      // rimuove "cm" o "cm." rimasto orfano
+    .replace(/,\s*$/, '')             // virgola finale orfana
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .replace(/^,\s*/, '');
+  if(!modello) modello = (nome||'').trim();
+  return { modello, misura };
+}
+function displayName(p){
+  return p.misura ? `${p.modello} ${p.misura}` : p.modello;
+}
+function misuraSortKey(m){
+  const n = parseInt((m||'').replace(/[^\d]/g,'').slice(0,3), 10);
+  return isNaN(n) ? 0 : n;
+}
+
+/* ================== IMPOSTAZIONI AZIENDA ================== */
+let settings = {
+  ragSociale: 'Simeoni Materassi Snc - di Fantinel Franca & C.',
+  indirizzo: 'via Madonna 7 Dolori n° 5 - 27029 - Vigevano',
+  piva: '02657270183'
+};
+async function loadSettings(){
+  try{
+    const res = await window.storage.get('settings', false);
+    if(res && res.value) settings = Object.assign(settings, JSON.parse(res.value));
+  }catch(e){ /* usa default */ }
+}
+async function saveSettingsToStorage(){
+  try{ await window.storage.set('settings', JSON.stringify(settings), false); }
+  catch(e){ showToast('Errore nel salvataggio impostazioni'); }
+}
+
+/* ================== STORAGE ================== */
+function localStorageAvailable(){
+  try{
+    const k = '__test_simeoni__';
+    localStorage.setItem(k, '1');
+    localStorage.removeItem(k);
+    return true;
+  }catch(e){ return false; }
+}
+/* Se l'app gira come file scaricato (fuori da claude.ai), window.storage non
+   esiste. In quel caso usiamo localStorage del browser: funziona offline,
+   senza server, salvando i dati sul dispositivo su cui è aperto il file. */
+if(!window.storage){
+  if(!localStorageAvailable()){
+    const warnBanner = document.getElementById('storageWarningBanner');
+    if(warnBanner) warnBanner.style.display = 'flex';
+  }
+  const NS = 'simeoni-magazzino::';
+  window.storage = {
+    async get(key){
+      const raw = localStorage.getItem(NS+key);
+      if(raw === null) throw new Error('chiave non trovata');
+      return { key, value: raw, shared:false };
+    },
+    async set(key, value){
+      localStorage.setItem(NS+key, value);
+      return { key, value, shared:false };
+    },
+    async delete(key){
+      localStorage.removeItem(NS+key);
+      return { key, deleted:true, shared:false };
+    },
+    async list(prefix){
+      const keys = [];
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(k && k.indexOf(NS)===0){
+          const bare = k.slice(NS.length);
+          if(!prefix || bare.startsWith(prefix)) keys.push(bare);
+        }
+      }
+      return { keys };
+    }
+  };
+}
+let saveTimer = null;
+let lastLocalChangeAt = 0;
+let driveSyncPushTimer = null;
+function markLocalChange(){
+  lastLocalChangeAt = Date.now();
+  clearTimeout(driveSyncPushTimer);
+  driveSyncPushTimer = setTimeout(()=>{ if(driveAccessToken) driveSyncNow(); }, 4000);
+}
+function scheduleSave(){
+  markLocalChange();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(persistProducts, 350);
+}
+async function persistProducts(){
+  try{
+    await window.storage.set('products', JSON.stringify(products), false);
+  }catch(e){
+    console.error('Errore salvataggio', e);
+    showToast('Errore nel salvataggio dei dati');
+  }
+}
+async function loadProducts(){
+  try{
+    const res = await window.storage.get('products', false);
+    if(res && res.value){
+      products = JSON.parse(res.value);
+      return true;
+    }
+  }catch(e){ /* key not found -> seed */ }
+  return false;
+}
+
+/* ---- movimenti di magazzino ---- */
+let saveMovTimer = null;
+function scheduleSaveMovements(){
+  markLocalChange();
+  clearTimeout(saveMovTimer);
+  saveMovTimer = setTimeout(persistMovements, 350);
+}
+async function persistMovements(){
+  try{ await window.storage.set('movements', JSON.stringify(movements), false); }
+  catch(e){ console.error('Errore salvataggio movimenti', e); }
+}
+async function loadMovements(){
+  try{
+    const res = await window.storage.get('movements', false);
+    if(res && res.value) movements = JSON.parse(res.value);
+  }catch(e){ movements = []; }
+}
+function logMovement(p, delta, motivo){
+  if(!delta) return;
+  movements.push({
+    id: crypto.randomUUID(),
+    productId: p.id,
+    nome: displayName(p),
+    categoria: p.categoria,
+    delta, motivo,
+    ts: Date.now()
+  });
+  scheduleSaveMovements();
+}
+async function seedIfEmpty(){
+  const loaded = await loadProducts();
+  if(!loaded){
+    products = window.PRODUCTS_SEED.map((p, i) => {
+      const { modello, misura } = extractMisura(p.prodotto);
+      return {
+        id: crypto.randomUUID(),
+        categoria: p.categoria,
+        modello, misura,
+        prodotto: p.prodotto,
+        codice: '',
+        lotto: p.lotto || '',
+        scadenza: '',
+        giacenza: p.giacenza || 0,
+        disponibilita: p.disponibilita || 0,
+        inArrivo: p.inArrivo || 0,
+        ubicazione: p.ubicazione || '',
+        valore: p.valore || 0,
+        prezzoAcquisto: 0
+      };
+    });
+    // assign sequential codes per category in original order
+    const counters = {};
+    products.forEach(p=>{
+      const pre = catPrefix(p.categoria);
+      counters[pre] = (counters[pre]||0)+1;
+      p.codice = pre + '-' + String(counters[pre]).padStart(4,'0');
+    });
+    await persistProducts();
+    document.getElementById('banner').style.display = 'flex';
+  } else {
+    migrateProducts();
+  }
+}
+function migrateProducts(){
+  let changed = false;
+  products.forEach(p=>{
+    if(p.modello === undefined){
+      const { modello, misura } = extractMisura(p.prodotto || '');
+      p.modello = modello; p.misura = misura; changed = true;
+    }
+    if(p.prezzoAcquisto === undefined){ p.prezzoAcquisto = 0; changed = true; }
+  });
+  if(changed) scheduleSave();
+}
+function dismissBanner(){ document.getElementById('banner').style.display='none'; }
+
+/* ================== UTIL ================== */
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function getCategories(){
+  const set = new Set(products.map(p=>p.categoria).filter(Boolean));
+  return Array.from(set).sort();
+}
+function nextCode(categoria){
+  const pre = catPrefix(categoria);
+  let max = 0;
+  products.forEach(p=>{
+    if(p.codice && p.codice.startsWith(pre+'-')){
+      const n = parseInt(p.codice.split('-')[1], 10);
+      if(!isNaN(n) && n>max) max = n;
+    }
+  });
+  return pre + '-' + String(max+1).padStart(4,'0');
+}
+function stockLevel(p){
+  if(p.giacenza <= 0) return 'out';
+  if(p.giacenza <= 2) return 'low';
+  return 'ok';
+}
+
+/* ================== TABS ================== */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    if(btn.dataset.view==='inventario') renderInventory();
+    if(btn.dataset.view==='etichette') renderLabelPreview();
+    if(btn.dataset.view==='statistiche') renderStatistiche();
+  });
+});
+
+/* ================== FILTERS (populate) ================== */
+function populateFilters(){
+  const cats = getCategories();
+  const catFilter = document.getElementById('catFilter');
+  const invCatFilter = document.getElementById('invCatFilter');
+  const fCategoria = document.getElementById('f_categoria');
+  const labelCatPick = document.getElementById('labelCatPick');
+  const misuraFilter = document.getElementById('misuraFilter');
+
+  catFilter.innerHTML = '<option value="all">Tutte le categorie</option>' + cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  invCatFilter.innerHTML = '<option value="all">Tutte le categorie</option>' + cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  fCategoria.innerHTML = cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('') + '<option value="__new">+ Nuova categoria…</option>';
+  labelCatPick.innerHTML = '<option value="">— seleziona categoria —</option>' + cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+  const misure = Array.from(new Set(products.map(p=>p.misura).filter(Boolean))).sort((a,b)=>misuraSortKey(a)-misuraSortKey(b));
+  const prevMisura = misuraFilter.value;
+  misuraFilter.innerHTML = '<option value="all">Tutte le misure</option>' + misure.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('');
+  if(misure.includes(prevMisura)) misuraFilter.value = prevMisura;
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ================== STATS ================== */
+function renderStats(){
+  const total = products.length;
+  const low = products.filter(p=>stockLevel(p)==='low').length;
+  const out = products.filter(p=>stockLevel(p)==='out').length;
+  const value = products.reduce((s,p)=> s + (Number(p.valore)||0)*(Number(p.giacenza)||0), 0);
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="n">${total}</div><div class="l">Prodotti a catalogo</div></div>
+    <div class="stat-card"><div class="n" style="color:var(--warn)">${low}</div><div class="l">Scorta bassa (≤2)</div></div>
+    <div class="stat-card"><div class="n" style="color:var(--danger)">${out}</div><div class="l">Esauriti</div></div>
+    <div class="stat-card"><div class="n">€ ${value.toFixed(0)}</div><div class="l">Valore magazzino stimato</div></div>
+  `;
+}
+
+/* ================== TABLE ================== */
+function filteredProducts(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  const stock = document.getElementById('stockFilter').value;
+  const misura = document.getElementById('misuraFilter').value;
+  return products.filter(p=>{
+    if(cat!=='all' && p.categoria!==cat) return false;
+    if(misura!=='all' && p.misura!==misura) return false;
+    if(stock!=='all' && stockLevel(p)!==stock) return false;
+    if(q){
+      const hay = (p.modello+' '+p.misura+' '+p.codice).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+function renderTable(){
+  let list = filteredProducts();
+  const body = document.getElementById('tableBody');
+  document.getElementById('emptyState').style.display = list.length ? 'none' : 'block';
+
+  const q = document.getElementById('searchInput').value.trim();
+  const misuraActive = document.getElementById('misuraFilter').value !== 'all';
+  const canGroup = !q && !misuraActive;
+
+  list = list.slice().sort((a,b)=>{
+    if(a.categoria !== b.categoria) return a.categoria.localeCompare(b.categoria);
+    if(a.modello !== b.modello) return a.modello.localeCompare(b.modello);
+    return misuraSortKey(a.misura) - misuraSortKey(b.misura);
+  });
+
+  // conta varianti per modello (per decidere se raggruppare)
+  const modelloCounts = {};
+  list.forEach(p=>{ const k = p.categoria+'|'+p.modello; modelloCounts[k] = (modelloCounts[k]||0)+1; });
+
+  let html = '';
+  let lastKey = null;
+  list.forEach(p=>{
+    const key = p.categoria+'|'+p.modello;
+    const isGroup = canGroup && modelloCounts[key] > 1;
+    const isFirstOfGroup = key !== lastKey;
+    lastKey = key;
+    const lvl = stockLevel(p);
+    const badge = lvl==='out' ? '<span class="badge badge-danger">Esaurito</span>' : lvl==='low' ? '<span class="badge badge-warn">Bassa</span>' : '';
+    const misuraChip = p.misura ? `<span class="cat-chip" style="background:var(--accent-soft);color:var(--accent);">${esc(p.misura)}</span>` : '<span style="color:var(--ink-faint);font-size:12.5px;">—</span>';
+
+    if(isGroup && isFirstOfGroup){
+      html += `<tr class="group-head-row"><td colspan="8" style="background:var(--surface-2);font-weight:600;font-size:13px;padding:7px 12px;color:var(--ink-soft);">${esc(p.modello)} <span style="font-weight:400;color:var(--ink-faint);">— ${modelloCounts[key]} misure</span></td></tr>`;
+    }
+    html += `
+    <tr data-id="${p.id}">
+      <td class="checkbox-cell"><input type="checkbox" class="row-check" data-id="${p.id}" ${selectedIds.has(p.id)?'checked':''}></td>
+      <td><span class="cat-chip"><span class="sw" style="background:${catColor(p.categoria)}"></span>${esc(p.categoria)}</span></td>
+      <td class="prod-name" data-open="${p.id}" style="cursor:pointer;">${isGroup ? '<span style="color:var(--ink-faint);">↳</span> ' : ''}${esc(isGroup ? (p.misura||p.modello) : p.modello)}<span class="sub">${esc(p.ubicazione||'—')}</span></td>
+      <td>${misuraChip}</td>
+      <td class="mono" style="font-size:12.5px;color:var(--ink-soft);">${esc(p.codice||'—')}</td>
+      <td>
+        <div class="qty-cell">
+          <button data-act="dec" data-id="${p.id}">−</button>
+          <input type="number" class="qty-input" data-id="${p.id}" value="${p.giacenza}">
+          <button data-act="inc" data-id="${p.id}">+</button>
+          ${badge}
+        </div>
+      </td>
+      <td style="color:var(--ink-soft);font-size:13px;">${esc(p.ubicazione||'—')}</td>
+      <td class="row-actions">
+        <button class="icon-btn" data-open="${p.id}" title="Modifica">✎</button>
+        <button class="icon-btn" data-label="${p.id}" title="Etichetta">🏷️</button>
+      </td>
+    </tr>`;
+  });
+  body.innerHTML = html;
+  updateSelCount();
+}
+function refreshAll(){
+  populateFilters();
+  renderStats();
+  renderTable();
+}
+
+/* table events (delegated) */
+document.getElementById('tableBody').addEventListener('click', (e)=>{
+  const t = e.target;
+  if(t.dataset.open){ openModal(t.dataset.open); return; }
+  if(t.dataset.label){ selectedIds = new Set([t.dataset.label]); switchToLabels(); return; }
+  if(t.dataset.act==='inc'){
+    const p = products.find(x=>x.id===t.dataset.id);
+    if(!p) return;
+    p.giacenza = (Number(p.giacenza)||0) + 1;
+    p.disponibilita = p.giacenza;
+    logMovement(p, 1, 'Carico');
+    scheduleSave();
+    renderTable(); renderStats();
+    return;
+  }
+  if(t.dataset.act==='dec'){
+    const p = products.find(x=>x.id===t.dataset.id);
+    if(!p) return;
+    if((Number(p.giacenza)||0) <= 0) return;
+    showReasonPopover(t, p);
+    return;
+  }
+});
+function showReasonPopover(anchorEl, p){
+  closeReasonPopover();
+  const rect = anchorEl.getBoundingClientRect();
+  const pop = document.createElement('div');
+  pop.className = 'reason-popover';
+  pop.id = 'activeReasonPopover';
+  pop.style.top = (rect.bottom + 6) + 'px';
+  pop.style.left = Math.min(rect.left, window.innerWidth - 170) + 'px';
+  pop.innerHTML = '<div class="rp-title">Motivo scarico</div>' +
+    MOTIVI.map(m=>`<button data-m="${esc(m)}">${esc(m)}</button>`).join('');
+  document.body.appendChild(pop);
+  pop.addEventListener('click', (e)=>{
+    const m = e.target.dataset.m;
+    if(!m) return;
+    p.giacenza = Math.max(0, (Number(p.giacenza)||0) - 1);
+    p.disponibilita = p.giacenza;
+    logMovement(p, -1, m);
+    scheduleSave();
+    renderTable(); renderStats();
+    closeReasonPopover();
+  });
+  setTimeout(()=>{ document.addEventListener('click', outsidePopoverListener); }, 0);
+}
+function outsidePopoverListener(e){
+  const pop = document.getElementById('activeReasonPopover');
+  if(pop && !pop.contains(e.target)) closeReasonPopover();
+}
+function closeReasonPopover(){
+  const pop = document.getElementById('activeReasonPopover');
+  if(pop) pop.remove();
+  document.removeEventListener('click', outsidePopoverListener);
+}
+document.getElementById('tableBody').addEventListener('change', (e)=>{
+  const t = e.target;
+  if(t.classList.contains('qty-input')){
+    const p = products.find(x=>x.id===t.dataset.id);
+    if(!p) return;
+    const oldVal = Number(p.giacenza)||0;
+    const newVal = Math.max(0, Number(t.value)||0);
+    const diff = newVal - oldVal;
+    p.giacenza = newVal;
+    p.disponibilita = newVal;
+    if(diff !== 0) logMovement(p, diff, 'Rettifica');
+    scheduleSave();
+    renderStats();
+  }
+  if(t.classList.contains('row-check')){
+    if(t.checked) selectedIds.add(t.dataset.id); else selectedIds.delete(t.dataset.id);
+    updateSelCount();
+  }
+});
+document.getElementById('selectAll').addEventListener('change', (e)=>{
+  const list = filteredProducts();
+  if(e.target.checked) list.forEach(p=>selectedIds.add(p.id));
+  else list.forEach(p=>selectedIds.delete(p.id));
+  renderTable();
+});
+function updateSelCount(){
+  document.getElementById('selCount').textContent = selectedIds.size;
+  document.getElementById('printSelectedBtn').disabled = selectedIds.size===0;
+}
+function switchToLabels(){
+  document.querySelector('.tab-btn[data-view="etichette"]').click();
+}
+
+document.getElementById('searchInput').addEventListener('input', renderTable);
+document.getElementById('searchInput').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){
+    const q = e.target.value.trim();
+    const exact = products.find(p=> (p.codice||'').toLowerCase() === q.toLowerCase());
+    if(exact){ openModal(exact.id); e.target.value=''; renderTable(); }
+  }
+});
+document.getElementById('catFilter').addEventListener('change', renderTable);
+document.getElementById('misuraFilter').addEventListener('change', renderTable);
+document.getElementById('stockFilter').addEventListener('change', renderTable);
+document.getElementById('printSelectedBtn').addEventListener('click', switchToLabels);
+document.getElementById('newProductBtn').addEventListener('click', ()=>openModal(null));
+
+/* ================== MODAL ================== */
+function openModal(id, prefillCode){
+  editingId = id;
+  const p = id ? products.find(x=>x.id===id) : null;
+  document.getElementById('modalTitle').textContent = p ? 'Modifica prodotto' : 'Nuovo prodotto';
+  populateFilters();
+  document.getElementById('f_categoria').value = p ? p.categoria : (getCategories()[0]||'');
+  document.getElementById('f_codice').value = p ? p.codice : (prefillCode || nextCode(document.getElementById('f_categoria').value));
+  document.getElementById('f_modello').value = p ? p.modello : '';
+  document.getElementById('f_misura').value = p ? p.misura : '';
+  document.getElementById('f_giacenza').value = p ? p.giacenza : 0;
+  document.getElementById('f_disponibilita').value = p ? p.disponibilita : 0;
+  document.getElementById('f_inArrivo').value = p ? p.inArrivo : 0;
+  document.getElementById('f_ubicazione').value = p ? p.ubicazione : '';
+  document.getElementById('f_lotto').value = p ? p.lotto : '';
+  document.getElementById('f_scadenza').value = p ? p.scadenza : '';
+  document.getElementById('f_valore').value = p ? p.valore : 0;
+  document.getElementById('f_prezzoAcquisto').value = p ? (p.prezzoAcquisto||0) : 0;
+  document.getElementById('deleteBtn').style.display = p ? 'inline-flex' : 'none';
+  document.getElementById('productModal').classList.add('active');
+  if(!p && prefillCode) setTimeout(()=>document.getElementById('f_modello').focus(), 50);
+}
+function closeModal(){
+  document.getElementById('productModal').classList.remove('active');
+  editingId = null;
+}
+document.getElementById('genCodeBtn').addEventListener('click', ()=>{
+  document.getElementById('f_codice').value = nextCode(document.getElementById('f_categoria').value);
+});
+document.getElementById('f_categoria').addEventListener('change', (e)=>{
+  if(e.target.value === '__new'){
+    const name = prompt('Nome nuova categoria:');
+    if(name){
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      e.target.insertBefore(opt, e.target.lastElementChild);
+      e.target.value = name;
+    } else {
+      e.target.value = getCategories()[0] || '';
+    }
+  }
+});
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  const categoria = document.getElementById('f_categoria').value.trim();
+  const modello = document.getElementById('f_modello').value.trim();
+  const misura = document.getElementById('f_misura').value.trim();
+  if(!categoria || !modello){ showToast('Categoria e modello sono obbligatori'); return; }
+  let codice = document.getElementById('f_codice').value.trim();
+  if(!codice) codice = nextCode(categoria);
+  const data = {
+    categoria, modello, misura,
+    prodotto: misura ? `${modello} ${misura}` : modello,
+    codice,
+    giacenza: Number(document.getElementById('f_giacenza').value)||0,
+    disponibilita: Number(document.getElementById('f_disponibilita').value)||0,
+    inArrivo: Number(document.getElementById('f_inArrivo').value)||0,
+    ubicazione: document.getElementById('f_ubicazione').value.trim(),
+    lotto: document.getElementById('f_lotto').value.trim(),
+    scadenza: document.getElementById('f_scadenza').value,
+    valore: Number(document.getElementById('f_valore').value)||0,
+    prezzoAcquisto: Number(document.getElementById('f_prezzoAcquisto').value)||0
+  };
+  if(editingId){
+    const p = products.find(x=>x.id===editingId);
+    const oldGiacenza = Number(p.giacenza)||0;
+    Object.assign(p, data);
+    const diff = (Number(p.giacenza)||0) - oldGiacenza;
+    if(diff !== 0) logMovement(p, diff, 'Rettifica');
+  } else {
+    products.push({ id: crypto.randomUUID(), ...data });
+  }
+  scheduleSave();
+  closeModal();
+  refreshAll();
+  showToast('Prodotto salvato');
+});
+document.getElementById('deleteBtn').addEventListener('click', ()=>{
+  if(!editingId) return;
+  if(!confirm('Eliminare definitivamente questo prodotto?')) return;
+  products = products.filter(x=>x.id!==editingId);
+  selectedIds.delete(editingId);
+  scheduleSave();
+  closeModal();
+  refreshAll();
+  showToast('Prodotto eliminato');
+});
+document.getElementById('productModal').addEventListener('click', (e)=>{
+  if(e.target.id==='productModal') closeModal();
+});
+
+/* ================== INVENTARIO ================== */
+function renderInventory(){
+  const q = document.getElementById('invSearch').value.trim().toLowerCase();
+  const cat = document.getElementById('invCatFilter').value;
+  const cats = getCategories();
+  const wrap = document.getElementById('invGroups');
+  wrap.innerHTML = '';
+  cats.filter(c=> cat==='all' || c===cat).forEach(c=>{
+    let items = products.filter(p=>p.categoria===c)
+      .sort((a,b)=> a.modello!==b.modello ? a.modello.localeCompare(b.modello) : misuraSortKey(a.misura)-misuraSortKey(b.misura));
+    if(q) items = items.filter(p=> (p.modello+' '+p.misura+' '+p.codice).toLowerCase().includes(q));
+    if(!items.length) return;
+    const group = document.createElement('div');
+    group.className = 'inv-group';
+    group.innerHTML = `<div class="inv-group-head"><span class="sw" style="background:${catColor(c)}"></span><h3>${esc(c)}</h3><span>${items.length} prodotti</span></div>`;
+    items.forEach(p=>{
+      const current = invCounts.hasOwnProperty(p.id) ? invCounts[p.id] : p.giacenza;
+      const diff = current - p.giacenza;
+      const diffClass = diff>0?'diff-pos':diff<0?'diff-neg':'diff-zero';
+      const diffLabel = diff>0? '+'+diff : diff;
+      const row = document.createElement('div');
+      row.className = 'inv-card';
+      row.innerHTML = `
+        <div class="name"><div class="p">${esc(p.modello)}${p.misura?` <span style="color:var(--accent);font-weight:600;">· ${esc(p.misura)}</span>`:''}</div><div class="c mono">${esc(p.codice||'')}</div></div>
+        <span class="diff-tag ${diffClass}">${diffLabel}</span>
+        <div class="inv-count">
+          <button data-act="dec" data-id="${p.id}">−</button>
+          <input type="number" data-id="${p.id}" value="${current}">
+          <button data-act="inc" data-id="${p.id}">+</button>
+        </div>`;
+      group.appendChild(row);
+    });
+    wrap.appendChild(group);
+  });
+  if(!wrap.innerHTML){
+    wrap.innerHTML = '<div class="empty-state"><h3>Nessun prodotto</h3><p>Modifica ricerca o filtro categoria.</p></div>';
+  }
+  const changed = Object.keys(invCounts).length;
+  const barHtml = `<div class="inv-bar"><span>${changed} prodotto/i modificati in questa sessione</span><button class="btn btn-primary" id="saveInvBtn">Salva conteggi</button></div>`;
+  wrap.insertAdjacentHTML('beforeend', barHtml);
+  document.getElementById('saveInvBtn').addEventListener('click', commitInventory);
+}
+document.getElementById('invGroups').addEventListener('click', (e)=>{
+  const t = e.target;
+  if(t.dataset.act){
+    const id = t.dataset.id;
+    const p = products.find(x=>x.id===id);
+    const cur = invCounts.hasOwnProperty(id) ? invCounts[id] : p.giacenza;
+    invCounts[id] = Math.max(0, cur + (t.dataset.act==='inc'?1:-1));
+    renderInventory();
+  }
+});
+document.getElementById('invGroups').addEventListener('change', (e)=>{
+  const t = e.target;
+  if(t.tagName==='INPUT' && t.dataset.id){
+    invCounts[t.dataset.id] = Math.max(0, Number(t.value)||0);
+    renderInventory();
+  }
+});
+document.getElementById('invSearch').addEventListener('input', renderInventory);
+document.getElementById('invCatFilter').addEventListener('change', renderInventory);
+document.getElementById('invResetBtn').addEventListener('click', ()=>{
+  if(Object.keys(invCounts).length && !confirm('Annullare tutti i conteggi non salvati?')) return;
+  invCounts = {};
+  renderInventory();
+});
+function commitInventory(){
+  const ids = Object.keys(invCounts);
+  if(!ids.length){ showToast('Nessuna modifica da salvare'); return; }
+  ids.forEach(id=>{
+    const p = products.find(x=>x.id===id);
+    if(p){
+      const diff = invCounts[id] - (Number(p.giacenza)||0);
+      p.giacenza = invCounts[id]; p.disponibilita = invCounts[id];
+      if(diff !== 0) logMovement(p, diff, 'Rettifica');
+    }
+  });
+  invCounts = {};
+  scheduleSave();
+  refreshAll();
+  renderInventory();
+  showToast('Inventario aggiornato: ' + ids.length + ' prodotti');
+}
+
+/* ================== STATISTICHE ================== */
+function renderStatistiche(){
+  const cats = getCategories();
+  const catSel = document.getElementById('statCatFilter');
+  const prevCat = catSel.value;
+  catSel.innerHTML = '<option value="all">Tutte le categorie</option>' + cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if(cats.includes(prevCat)) catSel.value = prevCat;
+
+  const periodo = document.getElementById('statPeriodo').value;
+  const catFilter = catSel.value;
+  const cutoff = periodo==='all' ? 0 : Date.now() - Number(periodo)*24*60*60*1000;
+
+  const inRange = movements.filter(m => m.ts >= cutoff && (catFilter==='all' || m.categoria===catFilter));
+  const vendite = inRange.filter(m => m.motivo==='Vendita');
+
+  // aggregazione per prodotto (pezzi venduti)
+  const byProduct = {};
+  vendite.forEach(m=>{
+    const key = m.productId;
+    if(!byProduct[key]) byProduct[key] = { nome:m.nome, categoria:m.categoria, qty:0 };
+    byProduct[key].qty += Math.abs(m.delta);
+  });
+  const ranking = Object.values(byProduct).sort((a,b)=>b.qty-a.qty).slice(0,15);
+  const maxQty = ranking.length ? ranking[0].qty : 1;
+
+  const totalePezzi = vendite.reduce((s,m)=>s+Math.abs(m.delta),0);
+  const byCat = {};
+  vendite.forEach(m=>{ byCat[m.categoria] = (byCat[m.categoria]||0) + Math.abs(m.delta); });
+  const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
+  const topProdotto = ranking[0];
+
+  document.getElementById('statSummary').innerHTML = `
+    <div class="stat-card"><div class="n">${totalePezzi}</div><div class="l">Pezzi venduti nel periodo</div></div>
+    <div class="stat-card"><div class="n" style="font-size:17px;">${topProdotto ? esc(topProdotto.nome) : '—'}</div><div class="l">Prodotto più venduto</div></div>
+    <div class="stat-card"><div class="n" style="font-size:17px;">${topCat ? esc(topCat[0]) : '—'}</div><div class="l">Categoria più venduta</div></div>
+    <div class="stat-card"><div class="n">${vendite.length}</div><div class="l">Scarichi per vendita registrati</div></div>
+  `;
+
+  const listEl = document.getElementById('topSellersList');
+  if(!ranking.length){
+    listEl.innerHTML = '<div class="empty-state" style="padding:30px 10px;"><h3>Nessuna vendita registrata</h3><p>Usa il pulsante "−" nella scheda Prodotti scegliendo "Vendita" per iniziare a raccogliere dati.</p></div>';
+  } else {
+    listEl.innerHTML = ranking.map((r,i)=>`
+      <div class="seller-row">
+        <div class="seller-rank">${i+1}</div>
+        <div class="seller-info"><div class="n">${esc(r.nome)}</div><div class="c">${esc(r.categoria)}</div></div>
+        <div class="seller-bar-wrap"><div class="seller-bar" style="width:${Math.max(4,(r.qty/maxQty)*100)}%"></div></div>
+        <div class="seller-qty">${r.qty} pz</div>
+      </div>`).join('');
+  }
+
+  const recent = inRange.slice().sort((a,b)=>b.ts-a.ts).slice(0,40);
+  const movBody = document.getElementById('movementsBody');
+  if(!recent.length){
+    movBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--ink-faint);padding:24px;">Nessun movimento nel periodo selezionato</td></tr>';
+  } else {
+    movBody.innerHTML = recent.map(m=>{
+      const d = new Date(m.ts);
+      const deltaLabel = m.delta>0 ? '+'+m.delta : m.delta;
+      const deltaColor = m.delta>0 ? 'var(--accent)' : 'var(--danger)';
+      return `<tr>
+        <td style="font-size:12.5px;color:var(--ink-soft);">${d.toLocaleDateString('it-IT')} ${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</td>
+        <td>${esc(m.nome)}</td>
+        <td><span class="cat-chip"><span class="sw" style="background:${catColor(m.categoria)}"></span>${esc(m.categoria)}</span></td>
+        <td>${esc(m.motivo)}</td>
+        <td style="font-weight:600;color:${deltaColor};">${deltaLabel}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+document.getElementById('statPeriodo').addEventListener('change', renderStatistiche);
+document.getElementById('statCatFilter').addEventListener('change', renderStatistiche);
+
+/* ================== ETICHETTE ================== */
+document.getElementById('codeTypeSeg').addEventListener('click', (e)=>{
+  if(e.target.tagName!=='BUTTON') return;
+  codeTypeMode = e.target.dataset.v;
+  document.querySelectorAll('#codeTypeSeg button').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  renderLabelPreview();
+});
+document.getElementById('sheetFormatSeg').addEventListener('click', (e)=>{
+  if(e.target.tagName!=='BUTTON') return;
+  sheetFormat = e.target.dataset.v;
+  document.querySelectorAll('#sheetFormatSeg button').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  document.getElementById('rotoloWidthField').style.display = sheetFormat==='rotolo' ? 'block' : 'none';
+  renderLabelPreview();
+});
+document.getElementById('rotoloWidth').addEventListener('change', (e)=>{
+  rotoloWidthMm = Number(e.target.value)||60;
+  renderLabelPreview();
+});
+document.getElementById('copiesInput').addEventListener('input', renderLabelPreview);
+document.getElementById('labelCatPick').addEventListener('change', renderLabelPreview);
+
+function labelTargetProducts(){
+  const catPick = document.getElementById('labelCatPick').value;
+  if(catPick) return products.filter(p=>p.categoria===catPick);
+  return products.filter(p=>selectedIds.has(p.id));
+}
+function expandedList(list, copies){
+  const out = [];
+  list.forEach(p=>{ for(let i=0;i<copies;i++) out.push(p); });
+  return out;
+}
+function formatNoteText(){
+  if(sheetFormat==='a4') return 'Layout: 24 etichette da 70×37 mm per foglio A4 (3 colonne × 8 righe, senza margini). Fai una prova su carta normale prima di stampare sugli adesivi, per verificare l\'allineamento del tuo modello di foglio.';
+  if(sheetFormat==='rotolo') return `Layout: un'etichetta per pagina, ${rotoloWidthMm}×40 mm — pensato per stampanti a rotolo termiche. Assicurati che nelle impostazioni di stampa del browser sia selezionata la stampante etichette con questo formato pagina.`;
+  return 'Foglio libero: le etichette si dispongono in righe su fogli A4 normali, da ritagliare a forbice.';
+}
+
+function renderLabelPreview(){
+  document.getElementById('formatNote').textContent = formatNoteText();
+  const wrap = document.getElementById('labelPreviewWrap');
+  const list = labelTargetProducts();
+  if(!list.length){
+    wrap.innerHTML = '<div class="no-selection">Seleziona uno o più prodotti dalla scheda <strong>Prodotti</strong> (checkbox a sinistra) oppure scegli una categoria qui sopra per generare le etichette.</div>';
+    document.getElementById('doPrintBtn').disabled = true;
+    return;
+  }
+  document.getElementById('doPrintBtn').disabled = false;
+  const copies = Math.max(1, Number(document.getElementById('copiesInput').value)||1);
+  wrap.innerHTML = '';
+  if(sheetFormat==='libero'){
+    const sheet = document.createElement('div');
+    sheet.className = 'label-sheet';
+    wrap.appendChild(sheet);
+    expandedList(list, copies).forEach(p => sheet.appendChild(buildTagEl(p)));
+  } else {
+    const dims = sheetFormat==='a4' ? {w:70,h:37} : {w:rotoloWidthMm,h:40};
+    const cont = document.createElement('div');
+    cont.className = 'compact-preview-wrap';
+    wrap.appendChild(cont);
+    expandedList(list, copies).forEach(p => cont.appendChild(buildCompactTagEl(p, dims.w, dims.h)));
+  }
+}
+function buildTagEl(p){
+  const el = document.createElement('div');
+  el.className = 'tag-label';
+  el.style.borderLeftColor = catColor(p.categoria);
+  el.innerHTML = `
+    <div class="punch"></div>
+    <div class="shop">Simeoni Materassi</div>
+    <div class="pname">${esc(p.modello)}</div>
+    <div class="pcat">${esc(p.categoria)}${p.misura ? ' · ' + esc(p.misura) : ''}</div>
+    <div class="codes"></div>
+    <div class="codice mono">${esc(p.codice||'')}</div>
+  `;
+  const codesDiv = el.querySelector('.codes');
+  if(codeTypeMode==='qr' || codeTypeMode==='both'){
+    const qrBox = document.createElement('div');
+    qrBox.className = 'qrbox';
+    codesDiv.appendChild(qrBox);
+    new QRCode(qrBox, { text: p.codice || p.prodotto, width: 72, height: 72, correctLevel: QRCode.CorrectLevel.M });
+  }
+  if(codeTypeMode==='barcode' || codeTypeMode==='both'){
+    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    codesDiv.appendChild(svg);
+    try{
+      JsBarcode(svg, p.codice || '0000', { format:'CODE128', displayValue:false, height:36, width:1.6, margin:0 });
+    }catch(e){ /* invalid char fallback */ }
+  }
+  return el;
+}
+function buildCompactTagEl(p, wMm, hMm){
+  const el = document.createElement('div');
+  el.className = 'tag-compact';
+  el.style.width = wMm + 'mm';
+  el.style.height = hMm + 'mm';
+  el.style.borderLeftColor = catColor(p.categoria);
+  el.innerHTML = `
+    <div class="tc-top"><span>Simeoni Materassi</span><span>${esc(p.categoria)}</span></div>
+    <div class="tc-name">${esc(p.modello)}${p.misura ? ` <span class="tc-misura">${esc(p.misura)}</span>` : ''}</div>
+    <div class="tc-codes"></div>
+  `;
+  const codesDiv = el.querySelector('.tc-codes');
+  if(codeTypeMode==='qr' || codeTypeMode==='both'){
+    const qrBox = document.createElement('div');
+    qrBox.className = 'tc-qr';
+    codesDiv.appendChild(qrBox);
+    new QRCode(qrBox, { text: p.codice || p.prodotto, width: 60, height: 60, correctLevel: QRCode.CorrectLevel.M });
+  }
+  if(codeTypeMode==='barcode' || codeTypeMode==='both'){
+    const bcWrap = document.createElement('div');
+    bcWrap.className = 'tc-barcode';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    bcWrap.appendChild(svg);
+    codesDiv.appendChild(bcWrap);
+    try{
+      JsBarcode(svg, p.codice || '0000', { format:'CODE128', displayValue:false, height:26, width:1.1, margin:0 });
+    }catch(e){ /* fallback silenzioso */ }
+  }
+  const codiceEl = document.createElement('span');
+  codiceEl.className = 'tc-codice';
+  codiceEl.textContent = p.codice || '';
+  codesDiv.appendChild(codiceEl);
+  return el;
+}
+function applyPrintPageStyle(){
+  let styleEl = document.getElementById('dynamicPageStyle');
+  if(!styleEl){ styleEl = document.createElement('style'); styleEl.id = 'dynamicPageStyle'; document.head.appendChild(styleEl); }
+  if(sheetFormat==='rotolo'){
+    styleEl.textContent = `@page{ size: ${rotoloWidthMm}mm 40mm; margin:0; }`;
+  } else if(sheetFormat==='a4'){
+    styleEl.textContent = `@page{ size: A4; margin:0; }`;
+  } else {
+    styleEl.textContent = `@page{ margin: 10mm; }`;
+  }
+}
+document.getElementById('doPrintBtn').addEventListener('click', ()=>{
+  const list = labelTargetProducts();
+  if(!list.length) return;
+  const copies = Math.max(1, Number(document.getElementById('copiesInput').value)||1);
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = '';
+  const items = expandedList(list, copies);
+
+  if(sheetFormat==='libero'){
+    const sheet = document.createElement('div');
+    sheet.className = 'label-sheet';
+    printArea.appendChild(sheet);
+    items.forEach(p => sheet.appendChild(buildTagEl(p)));
+  } else if(sheetFormat==='a4'){
+    const perPage = 24;
+    for(let i=0; i<items.length; i+=perPage){
+      const pageEl = document.createElement('div');
+      pageEl.className = 'a4-sheet';
+      items.slice(i, i+perPage).forEach(p => pageEl.appendChild(buildCompactTagEl(p, 70, 37)));
+      printArea.appendChild(pageEl);
+    }
+  } else { // rotolo
+    items.forEach(p=>{
+      const pageEl = document.createElement('div');
+      pageEl.className = 'roll-page';
+      pageEl.appendChild(buildCompactTagEl(p, rotoloWidthMm, 40));
+      printArea.appendChild(pageEl);
+    });
+  }
+  applyPrintPageStyle();
+  setTimeout(()=>window.print(), 150);
+});
+
+
+/* ================== IMPOSTAZIONI AZIENDA (modale) ================== */
+function openSettingsModal(){
+  document.getElementById('s_ragSociale').value = settings.ragSociale;
+  document.getElementById('s_indirizzo').value = settings.indirizzo;
+  document.getElementById('s_piva').value = settings.piva;
+  document.getElementById('s_googleClientId').value = settings.googleClientId || '';
+  updateDriveUI();
+  document.getElementById('settingsModal').classList.add('active');
+}
+function closeSettingsModal(){
+  document.getElementById('settingsModal').classList.remove('active');
+}
+document.getElementById('settingsBtn').addEventListener('click', openSettingsModal);
+document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
+  settings.ragSociale = document.getElementById('s_ragSociale').value.trim();
+  settings.indirizzo = document.getElementById('s_indirizzo').value.trim();
+  settings.piva = document.getElementById('s_piva').value.trim();
+  await saveSettingsToStorage();
+  closeSettingsModal();
+  showToast('Dati azienda aggiornati');
+});
+document.getElementById('settingsModal').addEventListener('click', (e)=>{
+  if(e.target.id==='settingsModal') closeSettingsModal();
+});
+
+/* ---- backup / ripristino ---- */
+document.getElementById('downloadBackupBtn').addEventListener('click', ()=>{
+  const backup = {
+    tipo: 'backup-magazzino-simeoni',
+    versione: 1,
+    esportatoIl: new Date().toISOString(),
+    products, movements, settings
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'backup-magazzino-simeoni-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  showToast('Backup scaricato');
+});
+document.getElementById('restoreBackupBtn').addEventListener('click', ()=>{
+  document.getElementById('restoreFileInput').click();
+});
+document.getElementById('restoreFileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev)=>{
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(!Array.isArray(data.products)) throw new Error('formato non valido');
+      const ok = confirm(`Ripristinare questo backup?\n\n${data.products.length} prodotti, ${Array.isArray(data.movements)?data.movements.length:0} movimenti registrati.\n\nQuesto SOSTITUIRÀ tutti i dati attuali dell'app. L'operazione non è reversibile.`);
+      if(!ok) return;
+      products = data.products;
+      movements = Array.isArray(data.movements) ? data.movements : [];
+      if(data.settings) settings = Object.assign(settings, data.settings);
+      migrateProducts();
+      await persistProducts();
+      await persistMovements();
+      await saveSettingsToStorage();
+      closeSettingsModal();
+      refreshAll();
+      showToast('Backup ripristinato correttamente');
+    }catch(err){
+      console.error(err);
+      showToast('File di backup non valido');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ================== ESPORTA PDF ================== */
+function fmtDate(d){
+  return d.toLocaleDateString('it-IT') + ' ' + d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+}
+function exportPdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+
+  const list = products.slice().sort((a,b)=>{
+    if(a.categoria!==b.categoria) return a.categoria.localeCompare(b.categoria);
+    if(a.modello!==b.modello) return a.modello.localeCompare(b.modello);
+    return misuraSortKey(a.misura)-misuraSortKey(b.misura);
+  });
+  const valoreVendita = list.reduce((s,p)=> s + (Number(p.valore)||0)*(Number(p.giacenza)||0), 0);
+  const valoreAcquisto = list.reduce((s,p)=> s + (Number(p.prezzoAcquisto)||0)*(Number(p.giacenza)||0), 0);
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text('Inventario magazzino', 14, 14);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+  const lines = [
+    ['Rag. sociale', settings.ragSociale],
+    ['Indirizzo', settings.indirizzo],
+    ['P.IVA', settings.piva],
+    ['Data estrazione', fmtDate(new Date())],
+    ['Valore totale merce (vendita)', '€ ' + valoreVendita.toFixed(2)],
+    ['Valore totale merce (acquisto)', '€ ' + valoreAcquisto.toFixed(2)]
+  ];
+  let y = 21;
+  lines.forEach(([label,val])=>{
+    doc.setFont('helvetica','bold'); doc.text(label + ':', 14, y);
+    doc.setFont('helvetica','normal'); doc.text(String(val), 62, y);
+    y += 5;
+  });
+
+  const rows = list.map(p=>[
+    p.categoria,
+    p.codice || '',
+    displayName(p),
+    p.lotto || '',
+    p.scadenza || '',
+    String(p.giacenza),
+    String(p.disponibilita),
+    String(p.inArrivo),
+    p.ubicazione || '',
+    '€ ' + ((Number(p.valore)||0)*(Number(p.giacenza)||0)).toFixed(2)
+  ]);
+
+  doc.autoTable({
+    startY: y + 3,
+    head: [['Categoria','Codice','Prodotto','Lotto','Scadenza','Giacenza','Disponibilità','In arrivo','Ubicazione','Valore totale']],
+    body: rows,
+    styles: { fontSize: 7.5, cellPadding: 1.6 },
+    headStyles: { fillColor: [47,93,98], textColor: 255 },
+    alternateRowStyles: { fillColor: [243,244,239] },
+    margin: { left: 14, right: 14 }
+  });
+
+  doc.save('inventario-magazzino-' + new Date().toISOString().slice(0,10) + '.pdf');
+  showToast('PDF esportato');
+}
+document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
+
+/* ================== ESPORTA EXCEL ================== */
+function exportExcel(){
+  const list = products.slice().sort((a,b)=>{
+    if(a.categoria!==b.categoria) return a.categoria.localeCompare(b.categoria);
+    if(a.modello!==b.modello) return a.modello.localeCompare(b.modello);
+    return misuraSortKey(a.misura)-misuraSortKey(b.misura);
+  });
+  const valoreVendita = list.reduce((s,p)=> s + (Number(p.valore)||0)*(Number(p.giacenza)||0), 0);
+  const valoreAcquisto = list.reduce((s,p)=> s + (Number(p.prezzoAcquisto)||0)*(Number(p.giacenza)||0), 0);
+
+  const aoa = [
+    ['Inventario magazzino'],
+    ['Rag. sociale', settings.ragSociale],
+    ['Indirizzo', settings.indirizzo],
+    ['P.IVA', settings.piva],
+    ['Data estrazione', fmtDate(new Date())],
+    ['Valore totale merce (vendita)', valoreVendita.toFixed(2)],
+    ['Valore totale merce (acquisto)', valoreAcquisto.toFixed(2)],
+    [],
+    ['Categoria','Codice','Prodotto','Lotto','Scadenza','Giacenza','Disponibilità','In arrivo','Ubicazione','Valore totale']
+  ];
+  list.forEach(p=>{
+    aoa.push([
+      p.categoria,
+      p.codice || '',
+      displayName(p),
+      p.lotto || '',
+      p.scadenza || '',
+      Number(p.giacenza)||0,
+      Number(p.disponibilita)||0,
+      Number(p.inArrivo)||0,
+      p.ubicazione || '',
+      ((Number(p.valore)||0)*(Number(p.giacenza)||0))
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [
+    {wch:14},{wch:12},{wch:44},{wch:10},{wch:10},{wch:9},{wch:11},{wch:9},{wch:12},{wch:12}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'classic_landscape');
+  XLSX.writeFile(wb, 'inventario-magazzino-' + new Date().toISOString().slice(0,10) + '.xlsx');
+  showToast('Excel esportato');
+}
+document.getElementById('exportExcelBtn').addEventListener('click', exportExcel);
+
+/* ================== IMPORTA EXCEL ================== */
+const IMPORT_COLS = {
+  categoria: ['categoria'],
+  codice: ['codice'],
+  prodotto: ['prodotto'],
+  lotto: ['lotto'],
+  scadenza: ['scadenza'],
+  giacenza: ['giacenza'],
+  disponibilita: ['disponibilità','disponibilita'],
+  inArrivo: ['in arrivo','inarrivo'],
+  ubicazione: ['ubicazione'],
+  valore: ['valore totale','valore']
+};
+let pendingImport = null; // { toUpdate:[{id,changes,row}], toCreate:[{...}] }
+
+document.getElementById('importExcelBtn').addEventListener('click', ()=>{
+  document.getElementById('importFileInput').click();
+});
+document.getElementById('importFileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const wb = XLSX.read(ev.target.result, { type:'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:'' });
+      parseImportedRows(aoa);
+    }catch(err){
+      console.error(err);
+      showToast('File non leggibile: verifica che sia un export compatibile');
+    }
+    e.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function normHeader(s){ return String(s||'').trim().toLowerCase(); }
+function findColIndex(headerRow, aliases){
+  for(let i=0;i<headerRow.length;i++){
+    const h = normHeader(headerRow[i]);
+    if(aliases.includes(h)) return i;
+  }
+  return -1;
+}
+function parseImportedRows(aoa){
+  // trova la riga di intestazione cercando "categoria" e "codice" nella stessa riga
+  let headerRowIdx = -1, colMap = null;
+  for(let r=0; r<aoa.length; r++){
+    const row = aoa[r];
+    if(!row) continue;
+    const hasCat = row.some(c => normHeader(c)==='categoria');
+    const hasCod = row.some(c => normHeader(c)==='codice');
+    if(hasCat && hasCod){
+      const map = {};
+      let ok = true;
+      for(const key in IMPORT_COLS){
+        const idx = findColIndex(row, IMPORT_COLS[key]);
+        map[key] = idx;
+      }
+      if(map.categoria===-1 || map.codice===-1){ ok = false; }
+      if(ok){ headerRowIdx = r; colMap = map; break; }
+    }
+  }
+  if(headerRowIdx===-1){
+    showToast('Intestazioni non riconosciute: controlla che il file abbia le colonne Categoria/Codice/Prodotto…');
+    return;
+  }
+  const toUpdate = [];
+  const toCreate = [];
+  const byCodice = {};
+  products.forEach(p=>{ if(p.codice) byCodice[p.codice.trim().toLowerCase()] = p; });
+
+  for(let r=headerRowIdx+1; r<aoa.length; r++){
+    const row = aoa[r];
+    if(!row || row.every(c=>c==='' || c==null)) continue;
+    const get = (key) => colMap[key]>=0 ? row[colMap[key]] : '';
+    const categoria = String(get('categoria')||'').trim();
+    const codice = String(get('codice')||'').trim();
+    const prodottoRaw = String(get('prodotto')||'').trim();
+    if(!categoria && !prodottoRaw) continue;
+    const giacenza = Number(get('giacenza')) || 0;
+    const disponibilita = get('disponibilita')!=='' ? (Number(get('disponibilita'))||0) : giacenza;
+    const inArrivo = Number(get('inArrivo')) || 0;
+    const ubicazione = String(get('ubicazione')||'').trim();
+    const lotto = String(get('lotto')||'').trim();
+    const scadenza = String(get('scadenza')||'').trim();
+    const valore = Number(get('valore')) || 0;
+    const { modello, misura } = extractMisura(prodottoRaw);
+
+    const existing = codice ? byCodice[codice.toLowerCase()] : null;
+    if(existing){
+      const changes = {};
+      if(existing.giacenza !== giacenza) changes.giacenza = { old: existing.giacenza, val: giacenza };
+      if(existing.ubicazione !== ubicazione) changes.ubicazione = { old: existing.ubicazione, val: ubicazione };
+      if(existing.inArrivo !== inArrivo) changes.inArrivo = { old: existing.inArrivo, val: inArrivo };
+      if(existing.lotto !== lotto) changes.lotto = { old: existing.lotto, val: lotto };
+      if(existing.scadenza !== scadenza) changes.scadenza = { old: existing.scadenza, val: scadenza };
+      if(Object.keys(changes).length){
+        toUpdate.push({ id: existing.id, nome: displayName(existing), codice, changes, disponibilita, valore });
+      }
+    } else {
+      toCreate.push({ categoria, codice: codice || null, modello, misura, prodotto: prodottoRaw || modello, lotto, scadenza, giacenza, disponibilita, inArrivo, ubicazione, valore, prezzoAcquisto:0 });
+    }
+  }
+  pendingImport = { toUpdate, toCreate };
+  showImportPreview();
+}
+function showImportPreview(){
+  const { toUpdate, toCreate } = pendingImport;
+  document.getElementById('importSummary').textContent =
+    `${toUpdate.length} prodotti da aggiornare, ${toCreate.length} nuovi prodotti da creare. Le righe senza modifiche non sono mostrate.`;
+  const body = document.getElementById('importPreviewBody');
+  let html = '';
+  toUpdate.forEach(u=>{
+    const giac = u.changes.giacenza ? `${u.changes.giacenza.old} → ${u.changes.giacenza.val}` : '—';
+    const ubic = u.changes.ubicazione ? `${u.changes.ubicazione.old||'—'} → ${u.changes.ubicazione.val||'—'}` : '—';
+    html += `<tr><td><span class="badge badge-warn">Aggiorna</span></td><td class="mono" style="font-size:12px;">${esc(u.codice)}</td><td>${esc(u.nome)}</td><td>${giac}</td><td>${ubic}</td></tr>`;
+  });
+  toCreate.forEach(c=>{
+    html += `<tr><td><span class="badge badge-ok">Nuovo</span></td><td class="mono" style="font-size:12px;">${esc(c.codice||'—')}</td><td>${esc(c.prodotto)}</td><td>${c.giacenza}</td><td>${esc(c.ubicazione||'—')}</td></tr>`;
+  });
+  body.innerHTML = html || '<tr><td colspan="5" style="text-align:center;color:var(--ink-faint);padding:20px;">Nessuna differenza rispetto ai dati attuali</td></tr>';
+  document.getElementById('confirmImportBtn').disabled = (toUpdate.length + toCreate.length) === 0;
+  document.getElementById('importModal').classList.add('active');
+}
+function closeImportModal(){
+  document.getElementById('importModal').classList.remove('active');
+  pendingImport = null;
+}
+document.getElementById('importModal').addEventListener('click', (e)=>{
+  if(e.target.id==='importModal') closeImportModal();
+});
+document.getElementById('confirmImportBtn').addEventListener('click', ()=>{
+  if(!pendingImport) return;
+  const { toUpdate, toCreate } = pendingImport;
+  toUpdate.forEach(u=>{
+    const p = products.find(x=>x.id===u.id);
+    if(!p) return;
+    if(u.changes.giacenza){
+      const diff = u.changes.giacenza.val - u.changes.giacenza.old;
+      if(diff !== 0) logMovement(p, diff, 'Rettifica');
+      p.giacenza = u.changes.giacenza.val;
+    }
+    p.disponibilita = u.disponibilita;
+    if(u.changes.ubicazione) p.ubicazione = u.changes.ubicazione.val;
+    if(u.changes.inArrivo) p.inArrivo = u.changes.inArrivo.val;
+    if(u.changes.lotto) p.lotto = u.changes.lotto.val;
+    if(u.changes.scadenza) p.scadenza = u.changes.scadenza.val;
+  });
+  toCreate.forEach(c=>{
+    const codice = c.codice || nextCode(c.categoria);
+    products.push({ id: crypto.randomUUID(), ...c, codice });
+  });
+  scheduleSave();
+  refreshAll();
+  closeImportModal();
+  showToast(`Importazione completata: ${toUpdate.length} aggiornati, ${toCreate.length} nuovi`);
+});
+
+/* ================== SCANSIONE QR (fotocamera) ================== */
+let scanStream = null;
+let scanRafId = null;
+let scanActive = false;
+let barcodeIntervalId = null;
+let quaggaBusy = false;
+
+document.getElementById('scanBtn').addEventListener('click', openScanModal);
+document.getElementById('scanModal').addEventListener('click', (e)=>{
+  if(e.target.id==='scanModal') closeScanModal();
+});
+
+async function openScanModal(){
+  document.getElementById('scanModal').classList.add('active');
+  const statusEl = document.getElementById('scanStatus');
+  statusEl.textContent = 'Avvio fotocamera…';
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    statusEl.textContent = 'Fotocamera non disponibile in questo browser. Su alcuni browser serve aprire l\'app come pagina https:// (non funziona da alcuni contesti di anteprima).';
+    return;
+  }
+  try{
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  }catch(e){
+    statusEl.textContent = 'Accesso alla fotocamera negato o non disponibile. Controlla i permessi del browser per questa pagina.';
+    return;
+  }
+  const video = document.getElementById('scanVideo');
+  video.srcObject = scanStream;
+  await video.play();
+  statusEl.textContent = 'Inquadra il QR o il codice a barre stampato sull\'etichetta del prodotto.';
+  scanActive = true;
+  scanLoop();
+  barcodeIntervalId = setInterval(tryDecodeBarcode, 400);
+}
+function scanLoop(){
+  if(!scanActive) return;
+  const video = document.getElementById('scanVideo');
+  const canvas = document.getElementById('scanCanvas');
+  if(video.readyState === video.HAVE_ENOUGH_DATA){
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imgData.data, canvas.width, canvas.height);
+    if(code && code.data){
+      handleScanResult(code.data.trim());
+      return;
+    }
+  }
+  scanRafId = requestAnimationFrame(scanLoop);
+}
+function tryDecodeBarcode(){
+  if(!scanActive || quaggaBusy) return;
+  const canvas = document.getElementById('scanCanvas');
+  if(!canvas.width || !canvas.height) return;
+  quaggaBusy = true;
+  let dataUrl;
+  try{ dataUrl = canvas.toDataURL('image/png'); }
+  catch(e){ quaggaBusy = false; return; }
+  Quagga.decodeSingle({
+    src: dataUrl,
+    numOfWorkers: 0,
+    inputStream: { size: 800 },
+    decoder: { readers: ['code_128_reader'] },
+    locate: true
+  }, function(result){
+    quaggaBusy = false;
+    if(!scanActive) return;
+    if(result && result.codeResult && result.codeResult.code){
+      handleScanResult(result.codeResult.code.trim());
+    }
+  });
+}
+function closeScanModal(){
+  scanActive = false;
+  if(scanRafId) cancelAnimationFrame(scanRafId);
+  if(barcodeIntervalId){ clearInterval(barcodeIntervalId); barcodeIntervalId = null; }
+  quaggaBusy = false;
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; }
+  const video = document.getElementById('scanVideo');
+  if(video) video.srcObject = null;
+  document.getElementById('scanModal').classList.remove('active');
+}
+function handleScanResult(codice){
+  closeScanModal();
+  const existing = products.find(p => (p.codice||'').toLowerCase() === codice.toLowerCase());
+  if(existing){
+    showToast('Prodotto trovato: ' + displayName(existing));
+    openModal(existing.id);
+  } else {
+    showToast('Codice non in archivio: crea il nuovo prodotto');
+    openModal(null, codice);
+  }
+}
+
+/* ================== SINCRONIZZAZIONE GOOGLE DRIVE ================== */
+const DRIVE_FILE_NAME = 'simeoni-magazzino-sync.json';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+let gisTokenClient = null;
+let driveAccessToken = null;
+let driveFileId = null;
+let lastSyncAt = null;
+let driveSyncing = false;
+
+function initGisClientIfPossible(){
+  if(!settings.googleClientId) return;
+  if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2){
+    // libreria non ancora caricata: riprova a breve
+    setTimeout(initGisClientIfPossible, 500);
+    return;
+  }
+  gisTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: settings.googleClientId,
+    scope: DRIVE_SCOPE,
+    callback: async (tokenResponse) => {
+      if(tokenResponse && tokenResponse.access_token){
+        driveAccessToken = tokenResponse.access_token;
+        updateDriveUI();
+        await driveSyncNow();
+      }
+    }
+  });
+  // prova un collegamento silenzioso se l'utente aveva già dato il consenso in passato
+  try{ gisTokenClient.requestAccessToken({ prompt: '' }); }catch(e){ /* ok, l'utente dovrà connettersi manualmente */ }
+}
+function connectDrive(){
+  if(!settings.googleClientId){ showToast('Inserisci prima il Client ID Google'); return; }
+  if(!gisTokenClient){ initGisClientIfPossible(); }
+  if(gisTokenClient) gisTokenClient.requestAccessToken({ prompt: 'consent' });
+}
+function disconnectDrive(){
+  if(driveAccessToken && typeof google !== 'undefined' && google.accounts && google.accounts.oauth2){
+    try{ google.accounts.oauth2.revoke(driveAccessToken, ()=>{}); }catch(e){ /* ignora */ }
+  }
+  driveAccessToken = null;
+  driveFileId = null;
+  updateDriveUI();
+  showToast('Google Drive disconnesso');
+}
+function sanitizeSettingsForSync(s){
+  const { googleClientId, ...rest } = s;
+  return rest;
+}
+async function driveApiFetch(url, options, retry){
+  const opts = Object.assign({}, options);
+  opts.headers = Object.assign({}, options && options.headers, { Authorization: 'Bearer ' + driveAccessToken });
+  const res = await fetch(url, opts);
+  if(res.status === 401 && !retry){
+    // token scaduto: prova un refresh silenzioso e riprova una volta
+    await new Promise(resolve=>{
+      const prevCb = gisTokenClient && gisTokenClient.callback;
+      gisTokenClient.callback = (tr)=>{ if(tr && tr.access_token) driveAccessToken = tr.access_token; resolve(); };
+      gisTokenClient.requestAccessToken({ prompt: '' });
+    });
+    return driveApiFetch(url, options, true);
+  }
+  return res;
+}
+async function driveFindFile(){
+  const q = encodeURIComponent(`name='${DRIVE_FILE_NAME}' and trashed=false`);
+  const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&fields=files(id,modifiedTime)`);
+  if(!res.ok) throw new Error('Ricerca file Drive fallita: ' + res.status);
+  const data = await res.json();
+  return (data.files && data.files.length) ? data.files[0] : null;
+}
+async function driveCreateFile(content){
+  const metadata = { name: DRIVE_FILE_NAME, mimeType: 'application/json' };
+  const boundary = 'simeoni_boundary_' + Date.now();
+  const delimiter = "\r\n--" + boundary + "\r\n";
+  const closeDelim = "\r\n--" + boundary + "--";
+  const body = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) +
+    delimiter + 'Content-Type: application/json\r\n\r\n' + content + closeDelim;
+  const res = await driveApiFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: { 'Content-Type': 'multipart/related; boundary=' + boundary },
+    body
+  });
+  if(!res.ok) throw new Error('Creazione file Drive fallita: ' + res.status);
+  return res.json();
+}
+async function driveUpdateFile(fileId, content){
+  const res = await driveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: content
+  });
+  if(!res.ok) throw new Error('Aggiornamento file Drive fallito: ' + res.status);
+  return res.json();
+}
+async function driveGetFileContent(fileId){
+  const res = await driveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  if(!res.ok) throw new Error('Lettura file Drive fallita: ' + res.status);
+  return res.text();
+}
+async function driveSyncNow(){
+  if(!driveAccessToken || driveSyncing) return;
+  driveSyncing = true;
+  updateDriveUI('Sincronizzazione in corso…');
+  try{
+    let file = driveFileId ? { id: driveFileId } : await driveFindFile();
+    if(!file){
+      const payload = JSON.stringify({ products, movements, settings: sanitizeSettingsForSync(settings), updatedAt: lastLocalChangeAt || Date.now() });
+      const created = await driveCreateFile(payload);
+      driveFileId = created.id;
+    } else {
+      driveFileId = file.id;
+      const remoteText = await driveGetFileContent(file.id);
+      const remote = remoteText ? JSON.parse(remoteText) : null;
+      const remoteUpdatedAt = remote && remote.updatedAt || 0;
+      if(remote && remoteUpdatedAt > (lastLocalChangeAt || 0)){
+        products = remote.products || products;
+        movements = Array.isArray(remote.movements) ? remote.movements : movements;
+        if(remote.settings) settings = Object.assign(settings, remote.settings);
+        migrateProducts();
+        await persistProducts();
+        await persistMovements();
+        await saveSettingsToStorage();
+        lastLocalChangeAt = remoteUpdatedAt;
+        refreshAll();
+        if(document.getElementById('view-inventario').classList.contains('active')) renderInventory();
+        if(document.getElementById('view-statistiche').classList.contains('active')) renderStatistiche();
+        showToast('Dati aggiornati da Google Drive');
+      } else if((lastLocalChangeAt || 0) > remoteUpdatedAt){
+        const payload = JSON.stringify({ products, movements, settings: sanitizeSettingsForSync(settings), updatedAt: lastLocalChangeAt });
+        await driveUpdateFile(file.id, payload);
+      }
+    }
+    lastSyncAt = Date.now();
+  }catch(e){
+    console.error('Errore sincronizzazione Drive', e);
+    showToast('Errore di sincronizzazione con Google Drive');
+  }
+  driveSyncing = false;
+  updateDriveUI();
+}
+function updateDriveUI(statusOverride){
+  const connectBtn = document.getElementById('connectDriveBtn');
+  const syncBtn = document.getElementById('syncNowBtn');
+  const disconnectBtn = document.getElementById('disconnectDriveBtn');
+  const statusEl = document.getElementById('driveStatus');
+  if(!connectBtn) return; // modale non ancora nel DOM in questo contesto
+  const hasClientId = !!settings.googleClientId;
+  connectBtn.style.display = (hasClientId && !driveAccessToken) ? 'inline-flex' : 'none';
+  syncBtn.style.display = driveAccessToken ? 'inline-flex' : 'none';
+  disconnectBtn.style.display = driveAccessToken ? 'inline-flex' : 'none';
+  if(statusOverride){ statusEl.textContent = statusOverride; return; }
+  if(!hasClientId){ statusEl.textContent = 'Nessun Client ID configurato: la sincronizzazione tra dispositivi è disattivata.'; return; }
+  if(!driveAccessToken){ statusEl.textContent = 'Client ID salvato. Premi "Connetti Google Drive" per collegare questo dispositivo.'; return; }
+  statusEl.textContent = 'Connesso a Google Drive.' + (lastSyncAt ? (' Ultima sincronizzazione: ' + new Date(lastSyncAt).toLocaleTimeString('it-IT')) : '');
+}
+document.getElementById('saveClientIdBtn').addEventListener('click', async ()=>{
+  const val = document.getElementById('s_googleClientId').value.trim();
+  settings.googleClientId = val;
+  await saveSettingsToStorage();
+  if(val) initGisClientIfPossible();
+  updateDriveUI();
+  showToast('Client ID salvato');
+});
+document.getElementById('connectDriveBtn').addEventListener('click', connectDrive);
+document.getElementById('syncNowBtn').addEventListener('click', ()=>driveSyncNow());
+document.getElementById('disconnectDriveBtn').addEventListener('click', disconnectDrive);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && driveAccessToken) driveSyncNow();
+});
+setInterval(()=>{ if(driveAccessToken) driveSyncNow(); }, 60000);
+
+/* ================== INIT ================== */
+(async function init(){
+  await loadSettings();
+  await loadMovements();
+  await seedIfEmpty();
+  refreshAll();
+  if(settings.googleClientId) initGisClientIfPossible();
+})();
+
+</script>
+</body>
+</html>
