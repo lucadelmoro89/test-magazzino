@@ -670,6 +670,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
       </div>
       <canvas id="scanCanvas" style="display:none;"></canvas>
       <p id="scanStatus" style="font-size:13px;color:var(--ink-soft);margin-top:12px;text-align:center;">Inquadra il QR o il codice a barre stampato sull'etichetta del prodotto.</p>
+      <div style="text-align:center;margin-top:8px;">
+        <button class="btn btn-sm" id="switchCameraBtn" type="button" style="display:none;">🔄 Cambia fotocamera</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1978,16 +1981,27 @@ let scanRafId = null;
 let scanActive = false;
 let barcodeIntervalId = null;
 let quaggaBusy = false;
+let scanStartedAt = 0;
+let blackFrameWarned = false;
+let videoInputDevices = [];
+let currentDeviceIndex = 0;
 
 document.getElementById('scanBtn').addEventListener('click', openScanModal);
 document.getElementById('scanModal').addEventListener('click', (e)=>{
   if(e.target.id==='scanModal') closeScanModal();
 });
 
+async function startCameraStream(constraints){
+  const video = document.getElementById('scanVideo');
+  scanStream = await navigator.mediaDevices.getUserMedia(constraints);
+  video.srcObject = scanStream;
+  await video.play();
+}
 async function openScanModal(){
   document.getElementById('scanModal').classList.add('active');
   const statusEl = document.getElementById('scanStatus');
   statusEl.textContent = 'Avvio fotocamera…';
+  blackFrameWarned = false;
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     statusEl.textContent = 'Fotocamera non disponibile in questo browser. Su alcuni browser serve aprire l\'app come pagina https:// (non funziona da alcuni contesti di anteprima).';
     return;
@@ -1997,25 +2011,53 @@ async function openScanModal(){
     return;
   }
   try{
-    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    // stessa richiesta semplice e affidabile usata nel test isolato: nessun vincolo
+    // di facingMode, che su alcuni dispositivi seleziona una fotocamera "fantasma" nera.
+    await startCameraStream({ video: true });
   }catch(e){
     statusEl.textContent = 'Accesso alla fotocamera negato o non disponibile. Controlla i permessi del browser per questa pagina.';
     return;
   }
-  const video = document.getElementById('scanVideo');
-  video.srcObject = scanStream;
+  // ora che il permesso è concesso, le etichette delle fotocamere sono leggibili:
+  // le elenchiamo per poter offrire il cambio fotocamera in modo affidabile (per deviceId,
+  // non per facingMode).
   try{
-    await video.play();
-  }catch(e){
-    statusEl.textContent = 'Impossibile avviare il video della fotocamera. Riprova.';
-    return;
-  }
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    videoInputDevices = devices.filter(d => d.kind === 'videoinput');
+    currentDeviceIndex = videoInputDevices.findIndex(d => scanStream.getVideoTracks()[0] && d.label === scanStream.getVideoTracks()[0].label);
+    if(currentDeviceIndex < 0) currentDeviceIndex = 0;
+  }catch(e){ videoInputDevices = []; }
+  document.getElementById('switchCameraBtn').style.display = videoInputDevices.length > 1 ? 'inline-flex' : 'none';
+
   statusEl.textContent = 'Inquadra il QR o il codice a barre stampato sull\'etichetta del prodotto.';
   scanActive = true;
+  scanStartedAt = Date.now();
   scanLoop();
   if(typeof Quagga !== 'undefined'){
     barcodeIntervalId = setInterval(tryDecodeBarcode, 400);
   }
+}
+async function switchCamera(){
+  if(videoInputDevices.length < 2) return;
+  if(scanStream) scanStream.getTracks().forEach(t=>t.stop());
+  currentDeviceIndex = (currentDeviceIndex + 1) % videoInputDevices.length;
+  const statusEl = document.getElementById('scanStatus');
+  try{
+    await startCameraStream({ video: { deviceId: { exact: videoInputDevices[currentDeviceIndex].deviceId } } });
+    blackFrameWarned = false;
+    scanStartedAt = Date.now();
+    statusEl.textContent = 'Inquadra il QR o il codice a barre stampato sull\'etichetta del prodotto.';
+  }catch(e){
+    statusEl.textContent = 'Impossibile cambiare fotocamera su questo dispositivo.';
+  }
+}
+document.getElementById('switchCameraBtn').addEventListener('click', switchCamera);
+function averageBrightness(data){
+  let sum = 0, samples = 0;
+  for(let i=0; i<data.length; i+=40){ // campiona pochi pixel, non serve leggerli tutti
+    sum += data[i]; samples++;
+  }
+  return samples ? sum/samples : 0;
 }
 function scanLoop(){
   if(!scanActive) return;
@@ -2028,6 +2070,16 @@ function scanLoop(){
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      // se dopo 2.5s l'immagine resta praticamente nera, avvisiamo (spesso è un permesso
+      // di sistema operativo bloccato, non un problema del sito)
+      if(!blackFrameWarned && Date.now() - scanStartedAt > 2500){
+        if(averageBrightness(imgData.data) < 8){
+          blackFrameWarned = true;
+          document.getElementById('scanStatus').innerHTML = 'L\'immagine risulta nera: controlla che la fotocamera non sia bloccata nelle <strong>impostazioni privacy del dispositivo</strong> (non del sito), oppure prova a cambiare fotocamera qui sotto.';
+        }
+      }
+
       const code = jsQR(imgData.data, canvas.width, canvas.height);
       if(code && code.data){
         handleScanResult(code.data.trim());
@@ -2292,3 +2344,4 @@ setInterval(()=>{ if(driveAccessToken) driveSyncNow(); }, 60000);
 </script>
 </body>
 </html>
+
