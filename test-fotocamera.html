@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test fotocamera</title>
+<style>
+  body{font-family:sans-serif;padding:16px;background:#f2f2f2;color:#222;}
+  video{width:100%;max-width:480px;background:#000;border-radius:8px;display:block;margin:12px 0;}
+  #log{white-space:pre-wrap;background:#fff;border:1px solid #ccc;border-radius:8px;padding:12px;font-size:13px;line-height:1.5;max-width:480px;}
+  button{padding:10px 16px;font-size:15px;border-radius:8px;border:1px solid #999;background:#fff;cursor:pointer;margin-bottom:10px;}
+  .ok{color:#2a7a2a;font-weight:bold;}
+  .err{color:#b23a48;font-weight:bold;}
+</style>
+</head>
+<body>
+<h2>Test isolato fotocamera</h2>
+<button id="startBtn">▶️ Avvia test fotocamera</button>
+<video id="v" autoplay playsinline muted></video>
+<canvas id="c" style="display:none;"></canvas>
+<div id="log">Premi il pulsante per iniziare. Il log dettagliato apparirà qui.</div>
+
+<script>
+const logEl = document.getElementById('log');
+function log(msg, cls){
+  const line = document.createElement('div');
+  if(cls) line.className = cls;
+  line.textContent = msg;
+  logEl.appendChild(line);
+}
+function clearLog(){ logEl.innerHTML = ''; }
+
+document.getElementById('startBtn').addEventListener('click', async () => {
+  clearLog();
+  log('User agent: ' + navigator.userAgent);
+  log('Pagina servita da: ' + location.protocol + '//' + location.host);
+  log('isSecureContext: ' + window.isSecureContext);
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    log('❌ navigator.mediaDevices.getUserMedia NON esiste in questo browser.', 'err');
+    return;
+  }
+  log('✔️ getUserMedia è disponibile, la richiedo ora...', 'ok');
+
+  try{
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    log('Fotocamere rilevate: ' + cams.length);
+    cams.forEach((c,i) => log('  [' + i + '] ' + (c.label || '(etichetta nascosta finché non dai il permesso)')));
+  }catch(e){
+    log('Impossibile elencare le fotocamere: ' + e.message);
+  }
+
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    log('✔️ getUserMedia RISOLTO con successo.', 'ok');
+  }catch(e){
+    log('❌ getUserMedia ha fallito: ' + e.name + ' — ' + e.message, 'err');
+    return;
+  }
+
+  const track = stream.getVideoTracks()[0];
+  if(track){
+    log('Traccia video: label="' + track.label + '"');
+    log('Impostazioni traccia: ' + JSON.stringify(track.getSettings()));
+    log('Stato traccia: readyState=' + track.readyState + ', muted=' + track.muted + ', enabled=' + track.enabled);
+  } else {
+    log('❌ Nessuna traccia video nello stream!', 'err');
+  }
+
+  const video = document.getElementById('v');
+  video.srcObject = stream;
+  try{
+    await video.play();
+    log('✔️ video.play() riuscito.', 'ok');
+  }catch(e){
+    log('❌ video.play() ha fallito: ' + e.message, 'err');
+  }
+
+  setTimeout(() => {
+    log('videoWidth x videoHeight: ' + video.videoWidth + ' x ' + video.videoHeight);
+    log('readyState video: ' + video.readyState + ' (4 = HAVE_ENOUGH_DATA, pronto)');
+    try{
+      const canvas = document.getElementById('c');
+      canvas.width = video.videoWidth || 100;
+      canvas.height = video.videoHeight || 100;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let sum = 0, n = 0;
+      for(let i=0; i<data.length; i+=40){ sum += data[i]; n++; }
+      const brightness = (sum/n).toFixed(1);
+      log('Luminosità media campionata dal fotogramma: ' + brightness + ' (0=nero puro, 255=bianco puro)');
+      if(brightness < 8){
+        log('❌ Il fotogramma è effettivamente NERO a livello di dati, non solo visivamente.', 'err');
+      } else {
+        log('✔️ Il fotogramma contiene dati reali (non è nero) — se lo schermo sembra comunque nero, il problema è nella visualizzazione, non nel flusso video.', 'ok');
+      }
+    }catch(e){
+      log('Impossibile analizzare il fotogramma: ' + e.message);
+    }
+  }, 1500);
+});
+</script>
+</body>
+</html>
